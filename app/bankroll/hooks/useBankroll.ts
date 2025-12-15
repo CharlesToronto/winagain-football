@@ -88,7 +88,6 @@ export function useBankroll() {
         user_id: userId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        bet_date: input.bet_date,
         ...input,
         odds: input.odds ?? 1,
         profit: 0,
