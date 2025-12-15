@@ -6,8 +6,8 @@ import CardOverUnder from "./CardOverUnder";
 import CardGoals from "./CardGoals";
 import CardCorners from "./CardCorners";
 import CardCards from "./CardCards";
-import CardSeries from "./cardseries";
-import CardHalfFull from "./cardhalffull";
+import CardSeries from "./CardSeries";
+import CardHalfFull from "./CardHalfFull";
 
 import computeFT from "@/lib/analysisEngine/computeFT";
 import computeHT from "@/lib/analysisEngine/computeHT";
