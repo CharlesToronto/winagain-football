@@ -11,7 +11,7 @@ function pct(count: number, total: number) {
 }
 
 // ===== MOTEUR FULL-TIME =====
-export function computeFT(fixtures: any[]): Record<string, ProbabilitySet> {
+export function computeFT(fixtures: any[]): any {
   const total = fixtures.length;
 
   const win = fixtures.filter(f => f.isHome ? f.goals_home > f.goals_away : f.goals_away > f.goals_home).length;
@@ -32,7 +32,7 @@ export function computeFT(fixtures: any[]): Record<string, ProbabilitySet> {
 }
 
 // ===== MOTEUR HALF-TIME =====
-export function computeHT(fixtures: any[]): Record<string, ProbabilitySet> {
+export function computeHT(fixtures: any[]): any {
   const total = fixtures.length;
 
   const win = fixtures.filter(f => f.ht_home > f.ht_away).length;
@@ -53,7 +53,7 @@ export function computeHT(fixtures: any[]): Record<string, ProbabilitySet> {
 }
 
 // ===== MOTEUR SECOND-HALF =====
-export function compute2H(fixtures: any[]): Record<string, ProbabilitySet> {
+export function compute2H(fixtures: any[]): any {
   const total = fixtures.length;
 
   // second-half = FT minus HT
