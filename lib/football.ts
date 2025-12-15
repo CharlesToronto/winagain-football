@@ -82,3 +82,14 @@ export async function getStandings(leagueId: number, season: number) {
   const data = await response.json();
   return data?.response?.[0]?.league?.standings?.[0] ?? [];
 }
+
+// Backward-compatible helpers
+export async function getCompetitionList() {
+  return fetchApi("leagues");
+}
+
+export const getCompetitions = getCompetitionList;
+
+export async function fetchFixtures(params: Record<string, any>) {
+  return fetchApi("fixtures", params);
+}
