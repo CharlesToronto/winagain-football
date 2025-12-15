@@ -12,7 +12,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     const table = resp?.[0]?.league?.standings?.[0] ?? [];
 
-    const normalized = table.map((row) => ({
+    const normalized = table.map((row: any) => ({
       rank: row.rank,
       teamId: row.team.id,
       teamName: row.team.name,
