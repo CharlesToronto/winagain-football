@@ -12,6 +12,7 @@ type TeamData = Record<string, any> | null;
 type LeagueData = Record<string, any> | null;
 type FixtureItem = Record<string, any>;
 type NextMatch = Record<string, any> | null;
+type RangeOption = number | "season";
 
 export default function TeamPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -21,7 +22,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [team, setTeam] = useState<TeamData>(null);
   const [league, setLeague] = useState<LeagueData>(null);
   const [stats, setStats] = useState<StatsState>(null);
-  const [range, setRange] = useState<50 | 40 | 30 | 20 | 10 | "season">("season");
+  const [range, setRange] = useState<RangeOption>("season");
   const [fixtures, setFixtures] = useState<FixtureItem[]>([]);
   const [nextMatch, setNextMatch] = useState<NextMatch>(null);
   const [loading, setLoading] = useState<boolean>(true);
