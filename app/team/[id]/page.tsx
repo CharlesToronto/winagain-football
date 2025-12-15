@@ -8,7 +8,7 @@ import { fetchApi } from "@/lib/football";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
 import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
 
-export default function TeamPage({ params }) {
+export default function TeamPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
 

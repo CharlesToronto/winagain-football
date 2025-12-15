@@ -1,12 +1,13 @@
 import "./globals.css";
 import Sidebar from "./components/layout/Sidebar";
+import { ReactNode } from "react";
 
 export const metadata = {
   title: "WinAgain",
   description: "Football analytics",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <body className="min-h-screen flex bg-gradient-to-b from-[#13002e] to-[#5f2370] text-white">

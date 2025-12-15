@@ -14,7 +14,7 @@ import computeHT from "@/lib/analysisEngine/computeHT";
 import compute2H from "@/lib/analysisEngine/compute2H";
 import computeStreaks from "@/lib/analysisEngine/computeStreaks";
 
-export default function ProbabilitiesView({ fixtures }) {
+export default function ProbabilitiesView({ fixtures }: { fixtures: any[] }) {
   const [filter, setFilter] = useState("FT");
 
   const engines = {

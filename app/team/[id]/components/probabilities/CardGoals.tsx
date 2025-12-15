@@ -1,6 +1,6 @@
 import StatRow from "./StatRow";
 
-export default function CardGoals({ data }) {
+export default function CardGoals({ data }: { data: any }) {
   const statsEngine = data;
   const streaks = data?.streaks ?? {};
   console.log("📘 CARD streaks:", streaks);

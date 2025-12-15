@@ -1,6 +1,6 @@
 import StatRow from "./StatRow";
 
-export default function CardResult({ data }) {
+export default function CardResult({ data }: { data: any }) {
   const statsEngine = data;
   const streaks = data?.streaks ?? {};
   console.log("➡️ CardResult received stats:", statsEngine);

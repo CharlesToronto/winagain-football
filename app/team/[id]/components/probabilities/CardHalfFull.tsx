@@ -1,6 +1,6 @@
 import StatRow from "./StatRow";
 
-export default function CardHalfFull({ data }) {
+export default function CardHalfFull({ data }: { data: any }) {
   const statsEngine = data;
   const streaks = data?.streaks ?? {};
   console.log("📘 CARD streaks:", streaks);

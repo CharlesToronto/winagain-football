@@ -63,17 +63,19 @@ export async function GET() {
       const list = fixturesByTeam[team.id] || [];
 
       // Only finished matches count for stats
-      const finished = list.filter((m) =>
+      const finished = list.filter((m: any) =>
         ["FT", "AET", "PEN"].includes(m.status)
       );
 
       // Sort by date DESC
-      finished.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      finished.sort(
+        (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
 
       // Last 5 matches
       const last5 = finished.slice(0, 5);
 
-      const formStrings = last5.map((m) => {
+      const formStrings = last5.map((m: any) => {
         if (m.goalsFor > m.goalsAgainst) return "W";
         if (m.goalsFor < m.goalsAgainst) return "L";
         return "D";
@@ -82,20 +84,20 @@ export async function GET() {
       const avg = (arr: number[]) =>
         arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
-      const avgGF = avg(finished.map((m) => m.goalsFor));
-      const avgGA = avg(finished.map((m) => m.goalsAgainst));
+      const avgGF = avg(finished.map((m: any) => m.goalsFor));
+      const avgGA = avg(finished.map((m: any) => m.goalsAgainst));
 
-      const home = finished.filter((m) => m.isHome);
-      const away = finished.filter((m) => !m.isHome);
+      const home = finished.filter((m: any) => m.isHome);
+      const away = finished.filter((m: any) => !m.isHome);
 
-      const homeAvgGF = avg(home.map((m) => m.goalsFor));
-      const homeAvgGA = avg(home.map((m) => m.goalsAgainst));
+      const homeAvgGF = avg(home.map((m: any) => m.goalsFor));
+      const homeAvgGA = avg(home.map((m: any) => m.goalsAgainst));
 
-      const awayAvgGF = avg(away.map((m) => m.goalsFor));
-      const awayAvgGA = avg(away.map((m) => m.goalsAgainst));
+      const awayAvgGF = avg(away.map((m: any) => m.goalsFor));
+      const awayAvgGA = avg(away.map((m: any) => m.goalsAgainst));
 
       const cleanSheets =
-        finished.filter((m) => m.goalsAgainst === 0).length /
+        finished.filter((m: any) => m.goalsAgainst === 0).length /
         (finished.length || 1);
 
       // EA Index: quick formula combining main stats
