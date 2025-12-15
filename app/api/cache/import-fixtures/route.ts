@@ -52,7 +52,7 @@ export async function GET() {
       const allFixtures: NormalizedFixture[] = [];
 
       for (const season of seasons) {
-        const fixtures = await fetchFixtures(Number(competition.id), season);
+        const fixtures = await fetchFixtures({ league: Number(competition.id), season });
         if (!fixtures || fixtures.length === 0) continue;
 
         for (const f of fixtures) {
