@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const factorial = (n: number): number => {
+  let result = 1;
+  for (let i = 2; i <= n; i++) result *= i;
+  return result;
+};
+
+const poisson = (x: number, k: number) => {
+  return (Math.pow(x, k) * Math.exp(-x)) / factorial(k);
+};
+
 /**
  * Compute match probabilities for a specific fixtureId using:
  * - EA Stats (team_stats)
@@ -56,17 +66,6 @@ export async function GET(
     // Expected Goals
     const xGF_home = Math.max(0.1, attackHome * defenseAway);
     const xGF_away = Math.max(0.1, attackAway * defenseHome);
-
-    // Poisson distribution function
-    function poisson(x: number, k: number) {
-      return (Math.pow(x, k) * Math.exp(-x)) / factorial(k);
-    }
-
-    function factorial(n: number): number {
-      let result = 1;
-      for (let i = 2; i <= n; i++) result *= i;
-      return result;
-    }
 
     // Compute match matrix (0 to 5 goals)
     const maxGoals = 5;
