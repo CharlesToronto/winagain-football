@@ -10,7 +10,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const data = await apiFootball(`fixtures?league=${leagueId}&season=${season}`);
     const fixtures = data?.response ?? [];
 
-    const normalized = fixtures.map((fx) => {
+    const normalized = fixtures.map((fx: any) => {
       const d = new Date(fx.fixture.date);
 
       return {
