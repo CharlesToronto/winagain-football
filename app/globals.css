@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply min-h-screen text-gray-100;
+  background: linear-gradient(to bottom, #13002e, #5f2370);
+  min-height: 100vh;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+}
+
+.glass-card {
+  @apply bg-white/10 rounded-xl shadow-soft border border-white/10 backdrop-blur-md;
+}
+
+.section-title {
+  @apply text-xl font-semibold text-white flex items-center gap-2;
+}
+
+.badge {
+  @apply px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white;
+}
