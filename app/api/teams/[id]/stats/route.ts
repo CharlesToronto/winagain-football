@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiFootball } from "@/lib/apiFootball";
 
-export async function GET(request, { params }) {
+export async function GET(request: Request, { params }: { params: any }) {
   try {
     const team = params.id;
     const league = request.nextUrl.searchParams.get("league");
