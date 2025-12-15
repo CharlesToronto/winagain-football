@@ -1,9 +1,9 @@
 import StatRow from "./StatRow";
 
-export default function CardCorners({ data }: { data: any }) {
+export default function CardCorners({ data, streaks }: { data: any; streaks: any }) {
   const statsEngine = data;
-  const streaks = data?.streaks ?? {};
-  console.log("📘 CARD streaks:", streaks);
+  const resolvedStreaks = data?.streaks ?? streaks ?? {};
+  console.log("📘 CARD streaks:", resolvedStreaks);
   if (!statsEngine) return null;
   const total = statsEngine.total ?? 0;
   const over = statsEngine.corners?.over ?? { raw: 0, percent: 0 };
@@ -13,8 +13,8 @@ export default function CardCorners({ data }: { data: any }) {
     <div className="bg-white/5 rounded-xl p-6 shadow">
       <h3 className="font-semibold mb-3">Corners</h3>
       <div className="space-y-1">
-        <StatRow label="Corners Over" count={`(${over.raw}/${total})`} percentGreen={`${over.percent}%`} percentBlue={streaks?.corners_over?.active ? `${streaks.corners_over.percent}%` : "–"} />
-        <StatRow label="Corners Under" count={`(${under.raw}/${total})`} percentGreen={`${under.percent}%`} percentBlue={streaks?.corners_under?.active ? `${streaks.corners_under.percent}%` : "–"} />
+        <StatRow label="Corners Over" count={`(${over.raw}/${total})`} percentGreen={`${over.percent}%`} percentBlue={resolvedStreaks?.corners_over?.active ? `${resolvedStreaks.corners_over.percent}%` : "–"} />
+        <StatRow label="Corners Under" count={`(${under.raw}/${total})`} percentGreen={`${under.percent}%`} percentBlue={resolvedStreaks?.corners_under?.active ? `${resolvedStreaks.corners_under.percent}%` : "–"} />
       </div>
     </div>
   );

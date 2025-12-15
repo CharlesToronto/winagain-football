@@ -1,33 +1,10 @@
 import Card from "@/app/components/ui/Card";
-import { createClient } from "@/lib/supabase/server";
+import { loadHomeCounts } from "@/lib/adapters/home";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const supabase = createClient();
-
-  // Fetch numbers
-  const { count: fixturesToday } = await supabase
-    .from("fixtures")
-    .select("*", { count: "exact", head: true })
-    .gte("date", new Date().toISOString().slice(0, 10))
-    .lte("date", new Date().toISOString().slice(0, 10));
-
-  const { count: leagues } = await supabase
-    .from("competitions")
-    .select("*", { count: "exact", head: true });
-
-  const { count: teams } = await supabase
-    .from("teams")
-    .select("*", { count: "exact", head: true });
-
-  const { count: teamStats } = await supabase
-    .from("team_stats")
-    .select("*", { count: "exact", head: true });
-
-  const { count: odds } = await supabase
-    .from("odds")
-    .select("*", { count: "exact", head: true });
+  const { fixturesToday, leagues, teams, teamStats, odds } = await loadHomeCounts();
 
   return (
     <div className="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

@@ -9,19 +9,15 @@ import CardCards from "./CardCards";
 import CardSeries from "./CardSeries";
 import CardHalfFull from "./CardHalfFull";
 
-import computeFT from "@/lib/analysisEngine/computeFT";
-import computeHT from "@/lib/analysisEngine/computeHT";
-import compute2H from "@/lib/analysisEngine/compute2H";
-import computeStreaks from "@/lib/analysisEngine/computeStreaks";
+import { getProbabilityEngines } from "@/lib/adapters/probabilities";
 
-export default function ProbabilitiesView({ fixtures }: { fixtures: any[] }) {
-  const [filter, setFilter] = useState("FT");
+type Fixture = any;
+type FilterKey = "FT" | "HT" | "2H";
 
-  const engines = {
-    FT: computeFT,
-    HT: computeHT,
-    "2H": compute2H,
-  };
+export default function ProbabilitiesView({ fixtures }: { fixtures: Fixture[] }) {
+  const [filter, setFilter] = useState<FilterKey>("FT");
+
+  const { engines, computeStreaks } = getProbabilityEngines();
 
   const computeEngine = engines[filter];
   const baseStats = computeEngine(fixtures ?? []);

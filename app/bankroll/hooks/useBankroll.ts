@@ -1,16 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { Bet, INITIAL_BANKROLL, computeStats, recomputeSequence } from "../utils/bankroll";
 import {
-  Bet,
-  BetResult,
-  INITIAL_BANKROLL,
-  computeStats,
-  recomputeSequence,
-} from "../utils/bankroll";
-
-const ANON_USER_ID = "00000000-0000-0000-0000-000000000000";
+  deleteBankrollBet,
+  fetchBankrollBets,
+  upsertBankrollBets,
+} from "@/lib/adapters/bankroll";
 
 type BetInput = Omit<
   Bet,
@@ -33,30 +29,16 @@ export function useBankroll() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const userId = user?.id ?? ANON_USER_ID;
-
-    const { data, error } = await supabase
-      .from("bankroll_bets")
-      .select("*")
-      .eq("user_id", userId)
-      .order("bet_date", { ascending: true })
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    const typed = (data || []) as Bet[];
+    try {
+      const typed = await fetchBankrollBets();
     const base =
       typed.length > 0 ? typed[0].starting_capital ?? INITIAL_BANKROLL : INITIAL_BANKROLL;
     setStartingCapital(base);
     const recalculated = recomputeSequence(typed, base);
     setBets(recalculated);
+    } catch (err: any) {
+      setError(err.message ?? "Failed to load bets");
+    }
     setLoading(false);
   }, []);
 
@@ -66,7 +48,7 @@ export function useBankroll() {
 
   const persistSequence = useCallback(async (updated: Bet[]) => {
     if (updated.length === 0) return;
-    await supabase.from("bankroll_bets").upsert(
+    await upsertBankrollBets(
       updated.map((bet) => ({
         ...bet,
         starting_capital: bet.starting_capital ?? startingCapital,
@@ -78,14 +60,9 @@ export function useBankroll() {
   const addBet = useCallback(
     async (input: BetInput) => {
       setError(null);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const userId = user?.id ?? ANON_USER_ID;
-
       const newBet: Bet = {
         id: crypto.randomUUID(),
-        user_id: userId,
+        user_id: undefined,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...input,
@@ -98,7 +75,7 @@ export function useBankroll() {
 
       const recalculated = recomputeSequence([...bets, newBet], startingCapital);
       setBets(recalculated);
-      await supabase.from("bankroll_bets").upsert(recalculated);
+      await upsertBankrollBets(recalculated);
     },
     [bets, startingCapital]
   );
@@ -133,7 +110,7 @@ export function useBankroll() {
         startingCapital
       );
       setBets(recalculated);
-      await supabase.from("bankroll_bets").upsert(recalculated);
+      await upsertBankrollBets(recalculated);
     },
     [bets, startingCapital]
   );
@@ -141,7 +118,7 @@ export function useBankroll() {
   const deleteBet = useCallback(
     async (id: string) => {
       setError(null);
-      await supabase.from("bankroll_bets").delete().eq("id", id);
+      await deleteBankrollBet(id);
       const recalculated = recomputeSequence(
         bets.filter((b) => b.id !== id),
         startingCapital

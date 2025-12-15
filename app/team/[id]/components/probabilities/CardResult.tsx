@@ -1,8 +1,8 @@
 import StatRow from "./StatRow";
 
-export default function CardResult({ data }: { data: any }) {
+export default function CardResult({ data, streaks }: { data: any; streaks: any }) {
   const statsEngine = data;
-  const streaks = data?.streaks ?? {};
+  const resolvedStreaks = data?.streaks ?? streaks ?? {};
   console.log("➡️ CardResult received stats:", statsEngine);
   console.log("📘 CARD streaks:", streaks);
   if (!statsEngine) return null;
@@ -29,56 +29,56 @@ export default function CardResult({ data }: { data: any }) {
           label="Victoire"
           count={`(${win.raw}/${total})`}
           percentGreen={`${win.percent}%`}
-          percentBlue={streaks?.win?.active ? `${streaks.win.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.win?.active ? `${resolvedStreaks.win.percent}%` : "–"}
         />
 
         <StatRow
           label="Nul"
           count={`(${draw.raw}/${total})`}
           percentGreen={`${draw.percent}%`}
-          percentBlue={streaks?.draw?.active ? `${streaks.draw.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.draw?.active ? `${resolvedStreaks.draw.percent}%` : "–"}
         />
 
         <StatRow
           label="Défaite"
           count={`(${lose.raw}/${total})`}
           percentGreen={`${lose.percent}%`}
-          percentBlue={streaks?.lose?.active ? `${streaks.lose.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.lose?.active ? `${resolvedStreaks.lose.percent}%` : "–"}
         />
 
         <StatRow
           label="Double Chance 1X"
           count={`(${dc1x.raw}/${total})`}
           percentGreen={`${dc1x.percent}%`}
-          percentBlue={streaks?.dc_1x?.active ? `${streaks.dc_1x.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.dc_1x?.active ? `${resolvedStreaks.dc_1x.percent}%` : "–"}
         />
 
         <StatRow
           label="Double Chance X2"
           count={`(${dcx2.raw}/${total})`}
           percentGreen={`${dcx2.percent}%`}
-          percentBlue={streaks?.dc_x2?.active ? `${streaks.dc_x2.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.dc_x2?.active ? `${resolvedStreaks.dc_x2.percent}%` : "–"}
         />
 
         <StatRow
           label="Double Chance 12"
           count={`(${dc12.raw}/${total})`}
           percentGreen={`${dc12.percent}%`}
-          percentBlue={streaks?.dc_12?.active ? `${streaks.dc_12.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.dc_12?.active ? `${resolvedStreaks.dc_12.percent}%` : "–"}
         />
 
         <StatRow
           label="Draw No Bet Home"
           count={`(${dnbHome.raw}/${total})`}
           percentGreen={`${dnbHome.percent}%`}
-          percentBlue={streaks?.dnb_home?.active ? `${streaks.dnb_home.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.dnb_home?.active ? `${resolvedStreaks.dnb_home.percent}%` : "–"}
         />
 
         <StatRow
           label="Draw No Bet Away"
           count={`(${dnbAway.raw}/${total})`}
           percentGreen={`${dnbAway.percent}%`}
-          percentBlue={streaks?.dnb_away?.active ? `${streaks.dnb_away.percent}%` : "–"}
+          percentBlue={resolvedStreaks?.dnb_away?.active ? `${resolvedStreaks.dnb_away.percent}%` : "–"}
         />
 
       </div>
