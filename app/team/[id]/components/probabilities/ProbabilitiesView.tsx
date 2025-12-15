@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import CardResult from "./cardresult";
-import CardOverUnder from "./cardoverunder";
-import CardGoals from "./cardgoals";
-import CardCorners from "./cardcorners";
-import CardCards from "./cardcards";
+import CardResult from "./CardResult";
+import CardOverUnder from "./CardOverUnder";
+import CardGoals from "./CardGoals";
+import CardCorners from "./CardCorners";
+import CardCards from "./CardCards";
 import CardSeries from "./cardseries";
 import CardHalfFull from "./cardhalffull";
 
