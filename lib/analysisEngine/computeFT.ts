@@ -1,6 +1,4 @@
-import { Fixture } from "@/types/fixture";
-
-export default function computeFT(fixtures: Fixture[] = []) {
+export default function computeFT(fixtures: any[] = []) {
   console.log("➡️ computeFT() INPUT:", fixtures.length);
 
   if (!fixtures || fixtures.length === 0) {

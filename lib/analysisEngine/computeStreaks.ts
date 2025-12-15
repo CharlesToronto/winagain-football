@@ -1,4 +1,4 @@
-import { Fixture } from "@/types/fixture";
+type Fixture = any;
 
 type StreakValue = {
   active: boolean;

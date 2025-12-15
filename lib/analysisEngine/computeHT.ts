@@ -1,6 +1,4 @@
-import { Fixture } from "@/types/fixture";
-
-export default function computeHT(fixtures: Fixture[] = []) {
+export default function computeHT(fixtures: any[] = []) {
   if (!fixtures || fixtures.length === 0) {
     return {
       total: 0,

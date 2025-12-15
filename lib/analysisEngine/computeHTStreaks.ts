@@ -1,4 +1,4 @@
-import { Fixture } from "@/types/fixture";
+type Fixture = any;
 
 /**
  * Determine HT condition result for a given fixture
@@ -71,7 +71,7 @@ function calculateContinuationProbability(
 /**
  * MAIN ENGINE
  */
-export default function computeHTStreaks(fixtures: Fixture[]) {
+export default function computeHTStreaks(fixtures: Fixture[] = []) {
   const keys = [
     "win",
     "draw",

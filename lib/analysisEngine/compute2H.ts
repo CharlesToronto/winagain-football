@@ -1,6 +1,4 @@
-import { Fixture } from "@/types/fixture";
-
-export default function compute2H(fixtures: Fixture[] = []) {
+export default function compute2H(fixtures: any[] = []) {
   const total = fixtures.length || 1;
 
   let win = 0;
