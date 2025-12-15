@@ -1,4 +1,4 @@
-import StatRow from "./statrow";
+import StatRow from "./StatRow";
 
 export default function CardOverUnder({ data }) {
   const statsEngine = data;
