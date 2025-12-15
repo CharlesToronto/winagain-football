@@ -8,7 +8,7 @@ export async function GET() {
   const supabase = createClient();
 
   try {
-    const competitions = getCompetitionList();
+    const competitions = await getCompetitionList();
 
     const { error: wipeError } = await supabase.from("competitions").delete().neq("id", 0);
     if (wipeError) {
