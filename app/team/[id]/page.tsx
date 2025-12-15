@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { fetchApi } from "@/lib/football";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
-import ProbabilitiesView from "./components/probabilities/probabilitiesview";
+import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
 
 export default function TeamPage({ params }) {
   const { id } = params;
