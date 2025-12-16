@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { apiFootball } from "@/lib/apiFootball";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 // On garde ce tableau synchronisé avec /api/competitions
 const GLOBAL_COMPETITIONS = [
   1, 2, 3, 4, 5, 6, 7, 9, 13, 14, 15, 16, 17, 19, 20, 848, 528

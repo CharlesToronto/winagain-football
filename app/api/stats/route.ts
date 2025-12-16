@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { apiFootball } from "@/lib/apiFootball";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
