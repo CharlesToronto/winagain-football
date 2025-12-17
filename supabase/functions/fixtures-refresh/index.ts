@@ -60,9 +60,19 @@ serve(async () => {
 
     for (const comp of competitions ?? []) {
       try {
+        const fromDate = new Date(Date.now() - WINDOW_DAYS * 86400000)
+          .toISOString()
+          .slice(0, 10);
+
+        const toDate = new Date()
+          .toISOString()
+          .slice(0, 10);
+
         const apiResponse = await fetchApiFootball("fixtures", {
           league: comp.id,
           season: SEASON,
+          from: fromDate,
+          to: toDate,
         });
 
         const matches = apiResponse?.response ?? [];
