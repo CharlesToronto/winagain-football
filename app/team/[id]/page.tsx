@@ -26,6 +26,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [fixtures, setFixtures] = useState<FixtureItem[]>([]);
   const [nextMatch, setNextMatch] = useState<NextMatch>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -67,7 +68,24 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         <span className="font-semibold">{team.name}</span>
       </div>
 
-      <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm border border-white/10 p-4 rounded-xl w-fit mb-6 text-white">
+      <div className="relative flex items-center gap-4 w-fit mb-6 text-white pr-10">
+        <button
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(team.name || "");
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            } catch {
+              setCopied(false);
+            }
+          }}
+          className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white/15 border border-white/20 text-white/80 hover:bg-white/25 hover:text-white flex items-center justify-center backdrop-blur-sm transition"
+          title="Copier le nom de l'équipe"
+        >
+          <span className="text-lg leading-none" aria-hidden>
+            {copied ? "✓" : "📄"}
+          </span>
+        </button>
         {team.logo && (
           <img
             src={team.logo}
@@ -142,7 +160,27 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           nextMatch={nextMatch}
         />
       ) : (
-        <ProbabilitiesView fixtures={fixtures} />
+        <ProbabilitiesView
+          fixtures={fixtures}
+          nextOpponentId={
+            (() => {
+              if (!nextMatch) return null;
+              const homeId = nextMatch?.teams?.home?.id;
+              const awayId = nextMatch?.teams?.away?.id;
+              if (!homeId || !awayId) return null;
+              return homeId === Number(team?.id) ? awayId : homeId;
+            })()
+          }
+          nextOpponentName={
+            (() => {
+              if (!nextMatch) return null;
+              const home = nextMatch?.teams?.home;
+              const away = nextMatch?.teams?.away;
+              if (!home?.id || !away?.id) return null;
+              return home.id === Number(team?.id) ? away?.name ?? null : home?.name ?? null;
+            })()
+          }
+        />
       )}
 
       <div className="mb-6 mt-6 p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded text-white">
