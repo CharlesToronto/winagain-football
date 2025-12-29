@@ -2,24 +2,33 @@
 
 import React, { useEffect, useState } from "react";
 
-function useCoarsePointer() {
-  const [isCoarse, setIsCoarse] = useState(false);
+function useMobileMode() {
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const media = window.matchMedia("(hover: none) and (pointer: coarse)");
-    const update = () => setIsCoarse(media.matches);
+    const coarse = window.matchMedia("(hover: none) and (pointer: coarse)");
+    const narrow = window.matchMedia("(max-width: 768px)");
+    const update = () => setIsMobile(coarse.matches || narrow.matches);
     update();
 
-    if (media.addEventListener) {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
+    if (coarse.addEventListener) {
+      coarse.addEventListener("change", update);
+      narrow.addEventListener("change", update);
+      return () => {
+        coarse.removeEventListener("change", update);
+        narrow.removeEventListener("change", update);
+      };
     }
-    media.addListener(update);
-    return () => media.removeListener(update);
+    coarse.addListener(update);
+    narrow.addListener(update);
+    return () => {
+      coarse.removeListener(update);
+      narrow.removeListener(update);
+    };
   }, []);
 
-  return isCoarse;
+  return isMobile;
 }
 
 export default function StatRow({
@@ -30,7 +39,7 @@ export default function StatRow({
   percentOrange,
   highlight,
 }: any) {
-  const isCoarse = useCoarsePointer();
+  const isMobile = useMobileMode();
   const [showCount, setShowCount] = useState(false);
 
   const rowClass = `flex justify-between items-center text-sm py-1 px-2 -mx-2 rounded-md ${
@@ -43,23 +52,25 @@ export default function StatRow({
   const orangeClass = highlight ? "text-yellow-300" : "text-orange-400";
 
   useEffect(() => {
-    if (!isCoarse && showCount) {
+    if (!isMobile && showCount) {
       setShowCount(false);
     }
-  }, [isCoarse, showCount]);
+  }, [isMobile, showCount]);
 
   const handleToggle = () => {
-    if (!isCoarse) return;
+    if (!isMobile) return;
     setShowCount((prev) => !prev);
   };
 
-  const percentBaseClass = `${isCoarse ? "cursor-pointer" : ""} font-semibold`;
+  const percentBaseClass = `${isMobile ? "cursor-pointer" : ""} font-semibold`;
 
   return (
     <div className={rowClass}>
       <div className="flex items-center gap-2">
         <span className={labelClass}>{label}</span>
-        <span className={`${countClass} mobile-hide`}>{count}</span>
+        {!isMobile ? (
+          <span className={`${countClass} hidden md:inline mobile-hide`}>{count}</span>
+        ) : null}
       </div>
       <div className="flex gap-2 items-center relative">
         <span className={`${greenClass} ${percentBaseClass}`} onClick={handleToggle}>
@@ -73,7 +84,7 @@ export default function StatRow({
             {percentOrange}
           </span>
         ) : null}
-        {isCoarse && showCount ? (
+        {isMobile && showCount ? (
           <span className="absolute -top-6 right-0 rounded-full border border-white/10 bg-black/70 px-2 py-0.5 text-[10px] text-white shadow">
             {count}
           </span>
