@@ -232,7 +232,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen w-full p-6 text-white relative">
-      <div className="absolute top-6 right-6 flex flex-wrap items-center justify-end gap-2 z-20 max-w-[90vw]">
+      <div className="fixed bottom-24 right-4 flex flex-wrap items-center justify-end gap-2 z-50 max-w-[90vw] md:absolute md:top-6 md:right-6 md:bottom-auto mobile-actions">
         <div
           className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
             trendSignalActive

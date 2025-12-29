@@ -54,7 +54,26 @@ body {
   }
 
   .mobile-fab {
-    bottom: 5rem !important;
-    right: 1rem !important;
+    top: 0.75rem !important;
+    right: 0.75rem !important;
+    bottom: auto !important;
+    flex-direction: column !important;
   }
+
+  .mobile-actions {
+    position: fixed !important;
+    top: auto !important;
+    right: 1rem !important;
+    bottom: 5.75rem !important;
+    left: auto !important;
+  }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

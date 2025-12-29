@@ -56,7 +56,7 @@ export default function FavoritesBubbles() {
   if (favorites.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 md:bottom-6 md:right-6 mobile-fab">
+    <div className="fixed top-20 right-4 z-50 flex flex-col items-center gap-2 md:top-auto md:bottom-6 md:right-6 md:flex-row mobile-fab">
       {favorites.map((fav) => (
         <Link
           key={fav.id}

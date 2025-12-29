@@ -10,7 +10,7 @@ export default function MobileNav() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden mobile-show">
       <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-[#13002e]/80 backdrop-blur-xl">
-        <nav className="grid grid-cols-4 gap-1 p-2">
+        <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = pathname.startsWith(item.href);
@@ -19,7 +19,7 @@ export default function MobileNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[10px] ${
+                className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 text-[10px] min-w-[72px] ${
                   active ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10"
                 }`}
               >
