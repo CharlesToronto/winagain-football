@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { MarketType, NextMatchWindow, SearchFilters } from "../types";
+import type { MarketType, NextMatchWindow, SearchFilters } from "../types";
 
 const MARKET_GROUPS: { title: string; options: { label: string; value: MarketType }[] }[] = [
   {

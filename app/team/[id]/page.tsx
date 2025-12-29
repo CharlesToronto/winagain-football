@@ -593,11 +593,11 @@ function getHighlightMatchKeys(teamStats: any, opponentStats: any) {
   const teamKeys = getHighlightBandKeySet(teamStats);
   const opponentKeys = getHighlightBandKeySet(opponentStats);
   const matches = new Set<string>();
-  for (const bandedKey of teamKeys) {
-    if (!opponentKeys.has(bandedKey)) continue;
+  teamKeys.forEach((bandedKey) => {
+    if (!opponentKeys.has(bandedKey)) return;
     const [type, key] = bandedKey.split(":");
     if (type && key) matches.add(`${type}:${key}`);
-  }
+  });
   return matches;
 }
 

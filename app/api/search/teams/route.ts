@@ -2,33 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import computeFT from "@/lib/analysisEngine/computeFT";
 import computeStreaks from "@/lib/analysisEngine/computeStreaks";
+import type { MarketType, NextMatchWindow, SearchFilters } from "@/app/search/types";
 
-type MarketType =
-  | "OVER_0_5"
-  | "OVER_1_5"
-  | "OVER_2_5"
-  | "OVER_3_5"
-  | "OVER_4_5"
-  | "UNDER_0_5"
-  | "UNDER_1_5"
-  | "UNDER_2_5"
-  | "UNDER_3_5"
-  | "UNDER_4_5"
-  | "UNDER_5_5"
-  | "DC_1X"
-  | "DC_X2"
-  | "DC_12";
-
-type NextMatchWindow = "today" | "j1" | "j2" | "j3";
-
-type Filters = {
-  nextMatch?: NextMatchWindow;
-  markets?: MarketType[];
-  probGreenMin?: number;
-  probGreenMax?: number;
-  probBlueMin?: number;
-  probBlueMax?: number;
-};
+type Filters = Partial<SearchFilters>;
 
 function startOfDay(ts: number) {
   const d = new Date(ts);
@@ -98,7 +74,7 @@ export async function POST(req: Request) {
     body = {};
   }
 
-  const filters: Required<Filters> = {
+  const filters: SearchFilters = {
     nextMatch: body.nextMatch || "today",
     markets: body.markets && body.markets.length ? body.markets : [],
     probGreenMin: body.probGreenMin ?? 0,
