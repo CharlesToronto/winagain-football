@@ -8,7 +8,7 @@ export default function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden mobile-show">
       <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-[#13002e]/80 backdrop-blur-xl">
         <nav className="grid grid-cols-4 gap-1 p-2">
           {navItems.map((item) => {
