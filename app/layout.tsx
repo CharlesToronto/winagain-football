@@ -1,5 +1,6 @@
 import "./globals.css";
 import Sidebar from "./components/layout/Sidebar";
+import MobileNav from "./components/layout/MobileNav";
 import FavoritesBubbles from "./components/FavoritesBubbles";
 import { ReactNode } from "react";
 
@@ -8,30 +9,36 @@ export const metadata = {
   description: "Football analytics",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
-      <body className="min-h-screen flex bg-gradient-to-b from-[#13002e] to-[#5f2370] text-white">
+      <body className="min-h-screen bg-gradient-to-b from-[#13002e] to-[#5f2370] text-white">
 
         {/* Sidebar */}
         <div
           className="
-    fixed left-0 top-0 h-full w-64 
+    hidden md:flex fixed left-0 top-0 h-full w-64 
     bg-gradient-to-b from-[#13002e]/80 to-[#5f2370]/80 
     backdrop-blur-xl 
     border-r border-white/10 
     text-white
-    flex flex-col
+    flex-col
   "
         >
           <Sidebar />
         </div>
 
         {/* Contenu */}
-        <main className="flex-1 ml-64 p-6">
+        <main className="min-h-screen ml-0 md:ml-64 p-4 sm:p-6 pb-24 md:pb-6">
           {children}
         </main>
 
+        <MobileNav />
         <FavoritesBubbles />
       </body>
     </html>

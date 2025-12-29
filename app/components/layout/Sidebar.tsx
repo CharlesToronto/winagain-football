@@ -1,17 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, CalendarDays, Trophy, Search, Users2, Settings, Wallet, Database } from "lucide-react";
-
-const navItems = [
-  { name: "Home", href: "/home", icon: Home },
-  { name: "Leagues", href: "/leagues", icon: Trophy },
-  { name: "Bankroll", href: "/bankroll", icon: Wallet },
-  { name: "Search", href: "/search", icon: Search },
-  { name: "Users", href: "/users", icon: Users2 },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Admin Data", href: "/admin-data", icon: Database },
-];
+import { navItems } from "./navItems";
 
 export default function Sidebar() {
   const pathname = usePathname();
