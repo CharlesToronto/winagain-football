@@ -47,8 +47,8 @@ export default function computeHT(fixtures: any[] = []) {
 
   for (const f of fixtures) {
     // Déterminer les buts HT selon si ton équipe est à domicile
-    const gf = f.isHome ? (f.score?.halftime?.home ?? 0) : (f.score?.halftime?.away ?? 0);
-    const ga = f.isHome ? (f.score?.halftime?.away ?? 0) : (f.score?.halftime?.home ?? 0);
+    const gf = f.isHome ? (f.goals_home_ht ?? 0) : (f.goals_away_ht ?? 0);
+    const ga = f.isHome ? (f.goals_away_ht ?? 0) : (f.goals_home_ht ?? 0);
 
     const totalGoals = gf + ga;
 

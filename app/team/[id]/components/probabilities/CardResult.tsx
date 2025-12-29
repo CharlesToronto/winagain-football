@@ -1,6 +1,14 @@
 import StatRow from "./StatRow";
 
-export default function CardResult({ data, streaks }: { data: any; streaks: any }) {
+export default function CardResult({
+  data,
+  streaks,
+  opponentData,
+}: {
+  data: any;
+  streaks: any;
+  opponentData?: any;
+}) {
   const statsEngine = data;
   const resolvedStreaks = data?.streaks ?? streaks ?? {};
   console.log("➡️ CardResult received stats:", statsEngine);
@@ -19,6 +27,15 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
   const dc12 = safe(statsEngine.dc_12);
   const dnbHome = safe(statsEngine.dnb_home);
   const dnbAway = safe(statsEngine.dnb_away);
+  const showOpponent = Boolean(opponentData);
+  const opponentWin = safe(opponentData?.win);
+  const opponentDraw = safe(opponentData?.draw);
+  const opponentLose = safe(opponentData?.lose);
+  const opponentDc1x = safe(opponentData?.dc_1x);
+  const opponentDcx2 = safe(opponentData?.dc_x2);
+  const opponentDc12 = safe(opponentData?.dc_12);
+  const opponentDnbHome = safe(opponentData?.dnb_home);
+  const opponentDnbAway = safe(opponentData?.dnb_away);
 
   return (
     <div className="card bg-white/5 rounded-xl p-6 shadow">
@@ -29,6 +46,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Victoire"
           count={`(${win.raw}/${total})`}
           percentGreen={`${win.percent}%`}
+          percentOrange={showOpponent ? `${opponentWin.percent}%` : undefined}
           percentBlue={resolvedStreaks?.win?.active ? `${resolvedStreaks.win.percent}%` : "–"}
         />
 
@@ -36,6 +54,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Nul"
           count={`(${draw.raw}/${total})`}
           percentGreen={`${draw.percent}%`}
+          percentOrange={showOpponent ? `${opponentDraw.percent}%` : undefined}
           percentBlue={resolvedStreaks?.draw?.active ? `${resolvedStreaks.draw.percent}%` : "–"}
         />
 
@@ -43,6 +62,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Défaite"
           count={`(${lose.raw}/${total})`}
           percentGreen={`${lose.percent}%`}
+          percentOrange={showOpponent ? `${opponentLose.percent}%` : undefined}
           percentBlue={resolvedStreaks?.lose?.active ? `${resolvedStreaks.lose.percent}%` : "–"}
         />
 
@@ -50,6 +70,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Double Chance 1X"
           count={`(${dc1x.raw}/${total})`}
           percentGreen={`${dc1x.percent}%`}
+          percentOrange={showOpponent ? `${opponentDc1x.percent}%` : undefined}
           percentBlue={resolvedStreaks?.dc_1x?.active ? `${resolvedStreaks.dc_1x.percent}%` : "–"}
         />
 
@@ -57,6 +78,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Double Chance X2"
           count={`(${dcx2.raw}/${total})`}
           percentGreen={`${dcx2.percent}%`}
+          percentOrange={showOpponent ? `${opponentDcx2.percent}%` : undefined}
           percentBlue={resolvedStreaks?.dc_x2?.active ? `${resolvedStreaks.dc_x2.percent}%` : "–"}
         />
 
@@ -64,6 +86,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Double Chance 12"
           count={`(${dc12.raw}/${total})`}
           percentGreen={`${dc12.percent}%`}
+          percentOrange={showOpponent ? `${opponentDc12.percent}%` : undefined}
           percentBlue={resolvedStreaks?.dc_12?.active ? `${resolvedStreaks.dc_12.percent}%` : "–"}
         />
 
@@ -71,6 +94,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Draw No Bet Home"
           count={`(${dnbHome.raw}/${total})`}
           percentGreen={`${dnbHome.percent}%`}
+          percentOrange={showOpponent ? `${opponentDnbHome.percent}%` : undefined}
           percentBlue={resolvedStreaks?.dnb_home?.active ? `${resolvedStreaks.dnb_home.percent}%` : "–"}
         />
 
@@ -78,6 +102,7 @@ export default function CardResult({ data, streaks }: { data: any; streaks: any 
           label="Draw No Bet Away"
           count={`(${dnbAway.raw}/${total})`}
           percentGreen={`${dnbAway.percent}%`}
+          percentOrange={showOpponent ? `${opponentDnbAway.percent}%` : undefined}
           percentBlue={resolvedStreaks?.dnb_away?.active ? `${resolvedStreaks.dnb_away.percent}%` : "–"}
         />
 

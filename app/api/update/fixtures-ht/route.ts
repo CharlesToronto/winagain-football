@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const supabase = createClient();
 
-  const SEASONS = [2024, 2025];
+  const SEASONS = [2025];
   let checked = 0;
   let updated = 0;
   const errors: any[] = [];

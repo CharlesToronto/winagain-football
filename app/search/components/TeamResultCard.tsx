@@ -51,15 +51,27 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
 function formatMarket(m: string) {
   switch (m) {
     case "OVER_0_5":
-      return "Over 0.5";
+      return "+0.5";
     case "OVER_1_5":
-      return "Over 1.5";
+      return "+1.5";
     case "OVER_2_5":
-      return "Over 2.5";
+      return "+2.5";
     case "OVER_3_5":
-      return "Over 3.5";
+      return "+3.5";
     case "OVER_4_5":
-      return "Over 4.5";
+      return "+4.5";
+    case "UNDER_0_5":
+      return "-0.5";
+    case "UNDER_1_5":
+      return "-1.5";
+    case "UNDER_2_5":
+      return "-2.5";
+    case "UNDER_3_5":
+      return "-3.5";
+    case "UNDER_4_5":
+      return "-4.5";
+    case "UNDER_5_5":
+      return "-5.5";
     case "DC_1X":
       return "Double chance 1X";
     case "DC_X2":

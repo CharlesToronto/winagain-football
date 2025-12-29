@@ -5,24 +5,24 @@ import { MarketType, NextMatchWindow, SearchFilters } from "../types";
 
 const MARKET_GROUPS: { title: string; options: { label: string; value: MarketType }[] }[] = [
   {
-    title: "Over",
+    title: "+",
     options: [
-      { label: "Over 0.5", value: "OVER_0_5" },
-      { label: "Over 1.5", value: "OVER_1_5" },
-      { label: "Over 2.5", value: "OVER_2_5" },
-      { label: "Over 3.5", value: "OVER_3_5" },
-      { label: "Over 4.5", value: "OVER_4_5" },
+      { label: "+0.5", value: "OVER_0_5" },
+      { label: "+1.5", value: "OVER_1_5" },
+      { label: "+2.5", value: "OVER_2_5" },
+      { label: "+3.5", value: "OVER_3_5" },
+      { label: "+4.5", value: "OVER_4_5" },
     ],
   },
   {
-    title: "Under",
+    title: "-",
     options: [
-      { label: "Under 0.5", value: "UNDER_0_5" },
-      { label: "Under 1.5", value: "UNDER_1_5" },
-      { label: "Under 2.5", value: "UNDER_2_5" },
-      { label: "Under 3.5", value: "UNDER_3_5" },
-      { label: "Under 4.5", value: "UNDER_4_5" },
-      { label: "Under 5.5", value: "UNDER_5_5" },
+      { label: "-0.5", value: "UNDER_0_5" },
+      { label: "-1.5", value: "UNDER_1_5" },
+      { label: "-2.5", value: "UNDER_2_5" },
+      { label: "-3.5", value: "UNDER_3_5" },
+      { label: "-4.5", value: "UNDER_4_5" },
+      { label: "-5.5", value: "UNDER_5_5" },
     ],
   },
   {

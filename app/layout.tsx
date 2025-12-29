@@ -1,5 +1,6 @@
 import "./globals.css";
 import Sidebar from "./components/layout/Sidebar";
+import FavoritesBubbles from "./components/FavoritesBubbles";
 import { ReactNode } from "react";
 
 export const metadata = {
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
 
+        <FavoritesBubbles />
       </body>
     </html>
   );

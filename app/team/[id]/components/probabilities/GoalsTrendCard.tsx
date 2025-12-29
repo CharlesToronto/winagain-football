@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type Fixture = any;
+type Mode = "FT" | "HT" | "2H";
 
 const THEME_GREEN = "#2dd4bf"; // turquoise doux
 const THEME_GREEN_DARK = "rgba(45, 212, 191, 0.18)";
 const THEME_BLUE = "rgba(255,255,255,0.35)"; // neutre clair pour la moyenne
 const THEME_ORANGE = "#fb923c";
 const THEME_ORANGE_LIGHT = "rgba(251, 146, 60, 0.6)";
+const THEME_PINK = "#ff4fd8";
+const THRESHOLD_OPTIONS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -54,19 +57,62 @@ function toPath(points: Point[]) {
   return d.join(" ");
 }
 
+function getGoalsForMode(f: Fixture, mode: Mode) {
+  if (mode === "HT") {
+    const home = f?.goals_home_ht;
+    const away = f?.goals_away_ht;
+    if (home == null || away == null) return null;
+    return { home, away };
+  }
+  if (mode === "2H") {
+    const ftHome = f?.goals_home;
+    const ftAway = f?.goals_away;
+    const htHome = f?.goals_home_ht;
+    const htAway = f?.goals_away_ht;
+    if (ftHome == null || ftAway == null || htHome == null || htAway == null) return null;
+    return {
+      home: Math.max(0, ftHome - htHome),
+      away: Math.max(0, ftAway - htAway),
+    };
+  }
+  const home = f?.goals_home;
+  const away = f?.goals_away;
+  if (home == null || away == null) return null;
+  return { home, away };
+}
+
 export default function GoalsTrendCard({
   fixtures,
   opponentFixtures = [],
   opponentName = "Adversaire",
   referenceCount = 0,
+  mode = "FT",
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
   opponentName?: string;
   referenceCount?: number;
+  mode?: Mode;
 }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
+  const [threshold, setThreshold] = useState(3.5);
+  const [isThresholdOpen, setIsThresholdOpen] = useState(false);
+  const thresholdRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!thresholdRef.current) return;
+      if (!thresholdRef.current.contains(event.target as Node)) {
+        setIsThresholdOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const { points, avg, total } = useMemo(() => {
     const usable = (fixtures ?? [])
@@ -79,18 +125,16 @@ export default function GoalsTrendCard({
           null;
         const dateObj = dateRaw ? new Date(dateRaw) : null;
         const date = dateObj ? dateObj.getTime() : null;
-        const gfRaw = f?.goals_home;
-        const gaRaw = f?.goals_away;
-        if (gfRaw == null || gaRaw == null) return null; // on ignore les matchs sans score
-        const gf = gfRaw ?? 0;
-        const ga = gaRaw ?? 0;
+        const goals = getGoalsForMode(f, mode);
+        if (!goals) return null; // on ignore les matchs sans score
+        const { home, away } = goals;
         const isHome = f.isHome ?? f.home_team_id === f.team_id;
         const opponent =
           isHome ? f.away_team_name ?? f.opp?.name : f.home_team_name ?? f.teams?.name;
-        const score = `${gf}-${ga}`;
+        const score = `${home}-${away}`;
         return {
           date,
-          totalGoals: gf + ga,
+          totalGoals: home + away,
           tooltip: {
             date: dateObj ? dateObj.toLocaleDateString("fr-FR") : undefined,
             opponent: opponent ?? undefined,
@@ -117,11 +161,13 @@ export default function GoalsTrendCard({
     }));
 
     return { points: pts, avg, total: totals.length };
-  }, [fixtures]);
+  }, [fixtures, mode]);
 
   const viewHeight = 100;
   const viewWidth = 100;
   const avgY = points.length ? viewHeight - (clamp(avg, 0, 8) / 8) * viewHeight : viewHeight;
+  const thresholdY =
+    viewHeight - (clamp(threshold, 0, 8) / 8) * viewHeight;
 
   const hoveredPoint = hoverIdx !== null && points[hoverIdx] ? points[hoverIdx] : null;
   const opponentSeries = useMemo(() => {
@@ -135,17 +181,15 @@ export default function GoalsTrendCard({
           null;
         const dateObj = dateRaw ? new Date(dateRaw) : null;
         const date = dateObj ? dateObj.getTime() : null;
-        const gfRaw = f?.goals_home;
-        const gaRaw = f?.goals_away;
-        if (gfRaw == null || gaRaw == null) return null;
-        const gf = gfRaw ?? 0;
-        const ga = gaRaw ?? 0;
+        const goals = getGoalsForMode(f, mode);
+        if (!goals) return null;
+        const { home, away } = goals;
         return {
           date,
-          totalGoals: gf + ga,
+          totalGoals: home + away,
           tooltip: {
             date: dateObj ? dateObj.toLocaleDateString("fr-FR") : undefined,
-            score: `${gf}-${ga}`,
+            score: `${home}-${away}`,
           },
           idx,
         };
@@ -173,7 +217,7 @@ export default function GoalsTrendCard({
     }));
 
     return { points: pts, avg, total: totals.length };
-  }, [opponentFixtures, referenceCount]);
+  }, [opponentFixtures, referenceCount, mode]);
 
   const hoveredOpponent =
     hoverIdx !== null && opponentSeries.points[hoverIdx]
@@ -187,21 +231,63 @@ export default function GoalsTrendCard({
           <h3 className="font-semibold">Tendance buts (total par match)</h3>
           <p className="text-xs text-white/70">Série de {total} match(s)</p>
         </div>
-        <button
-          onClick={() => setShowOpponent((v) => !v)}
-          disabled={!opponentFixtures || opponentFixtures.length === 0}
-          className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
-            showOpponent
-              ? "bg-orange-500 text-white"
-              : "bg-white/10 text-white hover:bg-white/20"
-          } ${
-            !opponentFixtures || opponentFixtures.length === 0
-              ? "opacity-40 cursor-not-allowed"
-              : ""
-          }`}
-        >
-          Adversaire
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs text-white/70">
+            <span>Nouvelle moyenne</span>
+            <div className="relative" ref={thresholdRef}>
+              <button
+                type="button"
+                className="px-3 py-1 rounded-md text-xs font-semibold bg-white/10 text-white border border-white/10 backdrop-blur-sm"
+                onClick={() => setIsThresholdOpen((open) => !open)}
+                aria-haspopup="listbox"
+                aria-expanded={isThresholdOpen}
+                aria-label="Nouvelle moyenne"
+              >
+                {threshold}
+              </button>
+              {isThresholdOpen && (
+                <div
+                  className="absolute left-0 mt-1 min-w-full rounded-md border border-white/10 bg-white/10 text-white backdrop-blur-md shadow-lg z-20"
+                  role="listbox"
+                  aria-label="Nouvelle moyenne"
+                >
+                  {THRESHOLD_OPTIONS.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="option"
+                      aria-selected={value === threshold}
+                      className={`w-full px-3 py-1 text-left text-xs font-semibold ${
+                        value === threshold ? "bg-white/20" : "bg-white/0"
+                      } hover:bg-white/20`}
+                      onClick={() => {
+                        setThreshold(value);
+                        setIsThresholdOpen(false);
+                      }}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowOpponent((v) => !v)}
+            disabled={!opponentFixtures || opponentFixtures.length === 0}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
+              showOpponent
+                ? "bg-orange-500 text-white"
+                : "bg-white/10 text-white hover:bg-white/20"
+            } ${
+              !opponentFixtures || opponentFixtures.length === 0
+                ? "opacity-40 cursor-not-allowed"
+                : ""
+            }`}
+          >
+            Adversaire
+          </button>
+        </div>
       </div>
 
       {points.length === 0 ? (
@@ -248,6 +334,14 @@ export default function GoalsTrendCard({
               stroke="rgba(255,255,255,0.7)"
               strokeWidth={0.8}
               strokeDasharray="1 1"
+            />
+            <line
+              x1={0}
+              y1={thresholdY}
+              x2={viewWidth}
+              y2={thresholdY}
+              stroke={THEME_PINK}
+              strokeWidth={0.6}
             />
             {showOpponent && opponentSeries.points.length > 0 && (
               <line

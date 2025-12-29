@@ -11,24 +11,53 @@ import CardHalfFull from "./CardHalfFull";
 import GoalsTrendCard from "./GoalsTrendCard";
 import CardDoubleChance from "./CardDoubleChance";
 import CardOverUnderHomeAway from "./CardOverUnderHomeAway";
+import CardGoalsSplit from "./CardGoalsSplit";
 
 import { getProbabilityEngines } from "@/lib/adapters/probabilities";
-import Link from "next/link";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
+import { useRouter } from "next/navigation";
 
 type Fixture = any;
 type FilterKey = "FT" | "HT" | "2H";
+
+type RangeOption = number | "season";
+
+const CURRENT_SEASON = 2025;
+
+function selectOpponentFixtures(fixtures: Fixture[], range?: RangeOption) {
+  let played = fixtures.filter((f) => f.goals_home !== null && f.goals_away !== null);
+
+  if (range === "season") {
+    played = played.filter((f) => f.season === CURRENT_SEASON);
+  }
+
+  played.sort(
+    (a, b) => new Date(b.date_utc).getTime() - new Date(a.date_utc).getTime()
+  );
+
+  const selectedCount = range === "season" || range == null ? played.length : range;
+  return played.slice(0, selectedCount);
+}
+
 
 export default function ProbabilitiesView({
   fixtures,
   nextOpponentId,
   nextOpponentName,
+  range,
+  overUnderMatchKeys,
+  overUnderHighlight,
 }: {
   fixtures: Fixture[];
   nextOpponentId?: number | null;
   nextOpponentName?: string | null;
+  range?: RangeOption;
+  overUnderMatchKeys?: Set<string>;
+  overUnderHighlight?: boolean;
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<FilterKey>("FT");
+  const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [opponentFixtures, setOpponentFixtures] = useState<Fixture[]>([]);
 
   const { engines, computeStreaks } = getProbabilityEngines();
@@ -42,6 +71,10 @@ export default function ProbabilitiesView({
     streaks: streakStats,
   };
   const streaks = streakStats;
+  const opponentStats =
+    showOpponentComparison && opponentFixtures.length > 0
+      ? computeEngine(opponentFixtures ?? [])
+      : null;
 
   console.log("➡️ FIXTURES RECEIVED BY ProbabilitiesView:", fixtures?.length);
   console.log("➡️ CURRENT FILTER:", filter);
@@ -62,7 +95,12 @@ export default function ProbabilitiesView({
           setOpponentFixtures([]);
           return;
         }
-        const mapped = raw.map((f: any) => {
+        const filtered = selectOpponentFixtures(raw, range);
+        if (!filtered || filtered.length === 0) {
+          setOpponentFixtures([]);
+          return;
+        }
+        const mapped = filtered.map((f: any) => {
           const isHome = f.home_team_id === Number(nextOpponentId);
           return {
             ...f,
@@ -80,7 +118,20 @@ export default function ProbabilitiesView({
       }
     }
     loadOpponent();
+  }, [nextOpponentId, range]);
+
+  useEffect(() => {
+    setShowOpponentComparison(false);
   }, [nextOpponentId]);
+
+  const handleOpponentClick = () => {
+    if (!nextOpponentId) return;
+    if (!showOpponentComparison) {
+      setShowOpponentComparison(true);
+      return;
+    }
+    router.push(`/team/${nextOpponentId}?tab=stats`);
+  };
 
   return (
     <div className="space-y-6">
@@ -115,23 +166,43 @@ export default function ProbabilitiesView({
         </div>
 
         {nextOpponentId ? (
-          <Link
-            href={`/team/${nextOpponentId}`}
+          <button
+            type="button"
+            onClick={handleOpponentClick}
             className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-sm font-semibold transition"
           >
             Visualiser le prochain adversaire
-          </Link>
+          </button>
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CardResultSimple data={stats} streaks={streaks} />
-        <CardDoubleChance data={stats} streaks={streaks} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
+        <CardGoalsSplit fixtures={fixtures ?? []} />
+        <CardDoubleChance
+          data={stats}
+          streaks={streaks}
+          opponentData={opponentStats}
+          highlightKeys={overUnderMatchKeys}
+          highlightActive={overUnderHighlight}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CardOverUnder data={stats} streaks={streaks} />
-        <CardOverUnderHomeAway fixtures={fixtures ?? []} />
+        <CardOverUnder
+          data={stats}
+          streaks={streaks}
+          opponentData={opponentStats}
+          highlightKeys={overUnderMatchKeys}
+          highlightActive={overUnderHighlight}
+        />
+        <CardOverUnderHomeAway
+          fixtures={fixtures ?? []}
+          opponentFixtures={opponentFixtures}
+          showOpponentComparison={showOpponentComparison}
+          highlightKeys={overUnderMatchKeys}
+          highlightActive={overUnderHighlight}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -140,18 +211,19 @@ export default function ProbabilitiesView({
           opponentFixtures={opponentFixtures}
           opponentName={nextOpponentName ?? "Adversaire"}
           referenceCount={fixtures?.length ?? 0}
+          mode={filter}
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <CardGoals data={stats} streaks={streaks} />
-        <CardCorners data={stats} streaks={streaks} />
-        <CardCards data={stats} streaks={streaks} />
+        <CardGoals data={stats} streaks={streaks} opponentData={opponentStats} />
+        <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
+        <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <CardSeries data={stats} streaks={streaks} />
-        <CardHalfFull data={stats} streaks={streaks} />
+        <CardSeries data={stats} streaks={streaks} opponentData={opponentStats} />
+        <CardHalfFull data={stats} streaks={streaks} opponentData={opponentStats} />
       </div>
 
       <div className="mt-6 p-4 rounded-lg bg-white/10 text-white text-sm">

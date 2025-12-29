@@ -109,7 +109,7 @@ export default function AddBetForm({ onSubmit }: Props) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
-            placeholder="Ex: PSG vs OM - Over 2.5"
+            placeholder="Ex: PSG vs OM - +2.5"
             required
           />
         </label>
@@ -130,19 +130,19 @@ export default function AddBetForm({ onSubmit }: Props) {
               <option value="Draw No Bet Home">Draw No Bet Home</option>
               <option value="Draw No Bet Away">Draw No Bet Away</option>
             </optgroup>
-            <optgroup label="Over / Under">
-              <option value="Over 0.5">Over 0.5</option>
-              <option value="Under 0.5">Under 0.5</option>
-              <option value="Over 1.5">Over 1.5</option>
-              <option value="Under 1.5">Under 1.5</option>
-              <option value="Over 2.5">Over 2.5</option>
-              <option value="Under 2.5">Under 2.5</option>
-              <option value="Over 3.5">Over 3.5</option>
-              <option value="Under 3.5">Under 3.5</option>
-              <option value="Over 4.5">Over 4.5</option>
-              <option value="Under 4.5">Under 4.5</option>
-              <option value="Over 5.5">Over 5.5</option>
-              <option value="Under 5.5">Under 5.5</option>
+            <optgroup label="+ / -">
+              <option value="Over 0.5">+0.5</option>
+              <option value="Under 0.5">-0.5</option>
+              <option value="Over 1.5">+1.5</option>
+              <option value="Under 1.5">-1.5</option>
+              <option value="Over 2.5">+2.5</option>
+              <option value="Under 2.5">-2.5</option>
+              <option value="Over 3.5">+3.5</option>
+              <option value="Under 3.5">-3.5</option>
+              <option value="Over 4.5">+4.5</option>
+              <option value="Under 4.5">-4.5</option>
+              <option value="Over 5.5">+5.5</option>
+              <option value="Under 5.5">-5.5</option>
             </optgroup>
           </select>
         </label>
