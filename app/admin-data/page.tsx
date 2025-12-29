@@ -223,12 +223,12 @@ export default function AdminDataPage() {
 
   return (
     <div className="min-h-screen w-full p-6 text-white">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <p className="text-sm opacity-70">Admin</p>
           <h1 className="text-3xl font-bold">Admin Data</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           {loading && (
             <span className="text-xs px-3 py-1 rounded-full bg-white/15 border border-white/20">
               {seconds}s
@@ -237,7 +237,7 @@ export default function AdminDataPage() {
           <button
             onClick={triggerUpdate}
             disabled={loading}
-            className={`px-4 py-2 rounded-md text-sm font-semibold transition min-w-[170px] text-center ${
+            className={`px-4 py-2 rounded-md text-sm font-semibold transition min-w-[170px] text-center w-full sm:w-auto ${
               loading
                 ? "bg-white/20 text-white/60 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-500"
@@ -273,11 +273,11 @@ export default function AdminDataPage() {
               {logs.map((log) => (
                 <div
                   key={log.id}
-                  className={`flex items-start gap-3 rounded-md px-3 py-2 ${
+                  className={`flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 rounded-md px-3 py-2 ${
                     log.status === "success" ? "bg-green-500/10 border border-green-500/20" : "bg-red-500/10 border border-red-500/20"
                   }`}
                 >
-                  <div className="text-xs opacity-60 min-w-[110px]">{formatDate(log.timestamp)}</div>
+                  <div className="text-xs opacity-60 min-w-0 sm:min-w-[110px]">{formatDate(log.timestamp)}</div>
                   <div className="text-sm">
                     <span
                       className={`mr-2 text-[11px] px-2 py-0.5 rounded-full uppercase ${
@@ -295,12 +295,12 @@ export default function AdminDataPage() {
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold">Mise à jour HT (goals_home_ht / goals_away_ht)</h3>
               <p className="text-xs text-white/70">Saisons 2024 et 2025</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               {htLoading && (
                 <span className="text-xs px-3 py-1 rounded-full bg-white/15 border border-white/20">
                   {htSeconds}s
@@ -309,7 +309,7 @@ export default function AdminDataPage() {
               <button
                 onClick={triggerHtUpdate}
                 disabled={htLoading}
-                className={`px-4 py-2 rounded-md text-sm font-semibold transition min-w-[200px] text-center ${
+                className={`px-4 py-2 rounded-md text-sm font-semibold transition min-w-[200px] text-center w-full sm:w-auto ${
                   htLoading
                     ? "bg-white/20 text-white/60 cursor-not-allowed"
                     : "bg-orange-500 hover:bg-orange-400"
@@ -347,11 +347,11 @@ export default function AdminDataPage() {
                 {htLogs.map((log) => (
                   <div
                     key={log.id}
-                    className={`flex items-start gap-3 rounded-md px-3 py-2 ${
+                    className={`flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 rounded-md px-3 py-2 ${
                       log.status === "success" ? "bg-green-500/10 border border-green-500/20" : "bg-red-500/10 border border-red-500/20"
                     }`}
                   >
-                    <div className="text-xs opacity-60 min-w-[110px]">
+                    <div className="text-xs opacity-60 min-w-0 sm:min-w-[110px]">
                       {formatDate(log.timestamp)}
                     </div>
                     <div className="text-sm">

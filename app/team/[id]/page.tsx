@@ -232,7 +232,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen w-full p-6 text-white relative">
-      <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+      <div className="absolute top-6 right-6 flex flex-wrap items-center justify-end gap-2 z-20 max-w-[90vw]">
         <div
           className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
             trendSignalActive
@@ -348,7 +348,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           </svg>
         </button>
       </div>
-      <div className="mb-6 flex items-center gap-3 text-sm opacity-80">
+      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm opacity-80">
         <Link href="/leagues" className="hover:underline">Leagues</Link>
         <span>/</span>
         {league ? (
@@ -362,7 +362,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         <span className="font-semibold">{team.name}</span>
       </div>
 
-      <div className="flex items-center gap-4 w-fit mb-6 text-white">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4 w-fit mb-6 text-white">
         {team.logo && (
           <img
             src={team.logo}
@@ -377,7 +377,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         {[50, 40, 30, 20, 10].map((n) => (
           <button
             key={n}
@@ -404,7 +404,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </button>
       </div>
 
-      <div className="flex gap-4 mb-6 border-b pb-2">
+      <div className="flex flex-wrap gap-4 mb-6 border-b pb-2">
         <button
           onClick={() => setTab("dashboard")}
           className={
@@ -734,10 +734,10 @@ function DashboardView({
               </div>
 
               {/* Match Banner */}
-              <div className="flex justify-between items-center w-full">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
 
                 {/* Home */}
-                <div className="flex flex-col items-center w-1/3">
+                <div className="flex flex-col items-center w-full sm:w-1/3">
                     <img
                         src={computedNextMatch.teams.home.logo}
                         alt={computedNextMatch.teams.home.name}
@@ -747,7 +747,7 @@ function DashboardView({
                 </div>
 
                 {/* Score or VS */}
-                <div className="flex flex-col items-center w-1/3">
+                <div className="flex flex-col items-center w-full sm:w-1/3">
                     {computedNextMatch.fixture.status.short === "NS" ? (
                         <p className="text-lg font-bold">VS</p>
                     ) : (
@@ -759,7 +759,7 @@ function DashboardView({
                 </div>
 
                 {/* Away */}
-                <div className="flex flex-col items-center w-1/3">
+                <div className="flex flex-col items-center w-full sm:w-1/3">
                     <img
                         src={computedNextMatch.teams.away.logo}
                         alt={computedNextMatch.teams.away.name}
@@ -818,29 +818,29 @@ function DashboardView({
             return (
               <div
                 key={f.id ?? idx}
-                className="flex items-center justify-between py-2 text-sm border-b border-white/10 last:border-0"
+                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between py-2 text-sm border-b border-white/10 last:border-0"
               >
                 {/* DATE */}
-                <div className="w-24 text-white/70">
+                <div className="w-full sm:w-24 text-white/70">
                   {format(new Date(match.date), "dd MMM yyyy")}
                 </div>
 
                 {/* MATCH */}
-                <div className="flex-1 flex items-center justify-center gap-6">
+                <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-6 w-full">
 
                   {/* HOME */}
-                  <div className="flex items-center justify-start gap-2 w-40">
+                  <div className="flex items-center justify-start gap-2 w-full sm:w-40">
                     {match.home.logo && <img src={match.home.logo} className="w-5 h-5" />}
                     <span className="font-medium">{match.home.name}</span>
                   </div>
 
                   {/* SCORE */}
-                  <div className="text-lg font-semibold w-12 text-center">
+                  <div className="text-lg font-semibold w-full sm:w-12 text-center">
                     {match.gh} - {match.ga}
                   </div>
 
                   {/* AWAY */}
-                  <div className="flex items-center justify-end gap-2 w-40">
+                  <div className="flex items-center justify-end gap-2 w-full sm:w-40">
                     <span className="font-medium text-right">{match.away.name}</span>
                     {match.away.logo && <img src={match.away.logo} className="w-5 h-5" />}
                   </div>

@@ -37,7 +37,7 @@ export default function StandingsList({ table, opponentByTeam }: Props) {
             key={teamId}
             onMouseEnter={() => setHoveredTeam(teamId ?? null)}
             onMouseLeave={() => setHoveredTeam(null)}
-            className={`flex items-center justify-between rounded-lg border px-3 py-2 transition-colors ${
+            className={`flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border px-3 py-2 transition-colors ${
               highlight
                 ? "bg-white/10 border-white/30"
                 : "border-white/10 hover:border-white/20 hover:bg-white/5"
@@ -59,7 +59,7 @@ export default function StandingsList({ table, opponentByTeam }: Props) {
               </div>
             </div>
 
-            <div className="text-sm text-white/80 flex gap-4">
+            <div className="text-sm text-white/80 flex flex-wrap gap-2 sm:gap-4 sm:justify-end">
               <span>W: {row.all?.win ?? "-"}</span>
               <span>D: {row.all?.draw ?? "-"}</span>
               <span>L: {row.all?.lose ?? "-"}</span>

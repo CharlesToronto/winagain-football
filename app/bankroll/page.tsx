@@ -23,30 +23,30 @@ export default function BankrollPage() {
 
   return (
     <div className="min-h-screen p-6 text-white">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <h1 className="text-3xl font-bold">Bankroll</h1>
         {loading && <span className="text-sm text-white/70">Chargement...</span>}
       </div>
 
       <div className="space-y-6">
-        <div className="p-4 rounded-xl bg-white/10 border border-white/10 text-white flex items-center gap-3">
+        <div className="p-4 rounded-xl bg-white/10 border border-white/10 text-white flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex-1">
             <p className="text-sm text-white/70">Capital de base</p>
             <p className="text-2xl font-semibold">{startingCapital.toFixed(2)} CAD</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
             <input
               type="number"
               step="0.01"
               value={startingCapital}
               onChange={(e) => setStartingCapitalState(parseFloat(e.target.value))}
-              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white w-32"
+              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white w-full sm:w-32"
             />
             <button
               onClick={async () => {
                 await updateStartingCapital(startingCapital);
               }}
-              className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold"
+              className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-semibold w-full sm:w-auto"
             >
               Mettre à jour
             </button>

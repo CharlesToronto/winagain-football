@@ -157,7 +157,7 @@ export function SearchFilters({
 
         <div className="flex flex-col gap-3">
           <label className="text-sm text-white/70">Marchés (multi-select)</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {MARKET_GROUPS.map((group) => (
               <div key={group.title} className="flex flex-col gap-2">
                 <p className="text-xs text-white/60">{group.title}</p>

@@ -24,7 +24,7 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
         <div>Marché : {formatMarket(team.market)}</div>
       </div>
 
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex flex-wrap items-center gap-4 text-sm">
         <span className="text-green-400 font-semibold">{team.probGreen}%</span>
         <span className="text-blue-400 font-semibold">{team.probBlue}%</span>
         <span

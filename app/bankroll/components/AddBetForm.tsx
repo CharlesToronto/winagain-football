@@ -68,9 +68,9 @@ export default function AddBetForm({ onSubmit }: Props) {
       onSubmit={handleSubmit}
       className="p-4 rounded-xl bg-white/10 border border-white/10 text-white flex flex-col gap-3"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="font-semibold text-lg">Ajouter un pari</h3>
-        <div className="flex items-center gap-2 text-sm bg-white/10 rounded-lg p-1">
+        <div className="flex flex-wrap items-center gap-2 text-sm bg-white/10 rounded-lg p-1">
           <button
             type="button"
             onClick={() => setMode("combined")}

@@ -135,8 +135,8 @@ export default function ProbabilitiesView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setFilter("FT")}
             className={`px-4 py-2 rounded-md ${

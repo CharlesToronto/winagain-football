@@ -226,12 +226,12 @@ export default function GoalsTrendCard({
 
   return (
     <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts (total par match)</h3>
           <p className="text-xs text-white/70">Série de {total} match(s)</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 text-xs text-white/70">
             <span>Nouvelle moyenne</span>
             <div className="relative" ref={thresholdRef}>
