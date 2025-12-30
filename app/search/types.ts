@@ -14,14 +14,16 @@ export type MarketType =
   | "DC_X2"
   | "DC_12";
 
-export type NextMatchWindow = "today" | "j1" | "j2" | "j3";
+export type FactType = "none" | "OVER_UNDER" | "RESULT" | "CLEAN_SHEET";
+export type OverUnderDirection = "OVER" | "UNDER";
+export type ResultType = "1" | "X" | "2" | "1X" | "X2" | "12";
 
 export type TeamResult = {
   id: number;
   name: string;
   logo?: string | null;
   league: string;
-  nextMatchDate: string; // ISO date
+  lastMatchDate: string; // ISO date
   opponent: string;
   market: MarketType;
   probGreen: number;
@@ -30,11 +32,9 @@ export type TeamResult = {
 };
 
 export type SearchFilters = {
-  nextMatch: NextMatchWindow;
-  markets: MarketType[];
-  probGreenMin: number;
-  probGreenMax: number;
-  probBlueMin: number;
-  probBlueMax: number;
-  useBlue?: boolean;
+  factType?: FactType;
+  overUnderDirection?: OverUnderDirection;
+  overUnderLine?: number;
+  resultType?: ResultType;
+  streakMin?: number;
 };

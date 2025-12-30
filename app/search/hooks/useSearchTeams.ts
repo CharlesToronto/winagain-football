@@ -2,13 +2,11 @@ import { useState, useMemo } from "react";
 import { SearchFilters, TeamResult } from "../types";
 
 const DEFAULT_FILTERS: SearchFilters = {
-  nextMatch: "today",
-  markets: [],
-  probGreenMin: 60,
-  probGreenMax: 100,
-  probBlueMin: 50,
-  probBlueMax: 100,
-  useBlue: true,
+  factType: "none",
+  overUnderDirection: "OVER",
+  overUnderLine: 2.5,
+  resultType: "1X",
+  streakMin: 1,
 };
 
 export function useSearchTeams(initial: SearchFilters = DEFAULT_FILTERS) {

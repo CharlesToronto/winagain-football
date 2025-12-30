@@ -41,6 +41,7 @@ export default function StatRow({
 }: any) {
   const isMobile = useMobileMode();
   const [showCount, setShowCount] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const rowClass = `flex justify-between items-center text-sm py-1 px-2 -mx-2 rounded-md ${
     highlight ? "bg-yellow-400/10 ring-1 ring-yellow-300/40" : ""
@@ -63,16 +64,19 @@ export default function StatRow({
   };
 
   const percentBaseClass = `${isMobile ? "cursor-pointer" : ""} font-semibold`;
+  const showTooltip = isMobile ? showCount : isHovered;
 
   return (
     <div className={rowClass}>
       <div className="flex items-center gap-2">
         <span className={labelClass}>{label}</span>
-        {!isMobile ? (
-          <span className={`${countClass} hidden md:inline mobile-hide`}>{count}</span>
-        ) : null}
+        <span className={`${countClass} hidden`}>{count}</span>
       </div>
-      <div className="flex gap-2 items-center relative">
+      <div
+        className="flex gap-2 items-center relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <span className={`${greenClass} ${percentBaseClass}`} onClick={handleToggle}>
           {percentGreen}
         </span>
@@ -84,7 +88,7 @@ export default function StatRow({
             {percentOrange}
           </span>
         ) : null}
-        {isMobile && showCount ? (
+        {showTooltip ? (
           <span className="absolute -top-6 right-0 rounded-full border border-white/10 bg-black/70 px-2 py-0.5 text-[10px] text-white shadow">
             {count}
           </span>

@@ -19,9 +19,9 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
       </div>
 
       <div className="text-sm text-white/80">
-        <div>Prochain match : {new Date(team.nextMatchDate).toLocaleString("fr-FR")}</div>
+        <div>Dernier match : {new Date(team.lastMatchDate).toLocaleString("fr-FR")}</div>
         <div>Adversaire : {team.opponent}</div>
-        <div>Marché : {formatMarket(team.market)}</div>
+        <div>Marche : {formatMarket(team.market)}</div>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -41,7 +41,7 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
           href={`/team/${team.id}`}
           className="px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 text-sm"
         >
-          Voir l’équipe
+          Voir l'equipe
         </Link>
       </div>
     </div>
@@ -82,3 +82,4 @@ function formatMarket(m: string) {
       return m;
   }
 }
+
