@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
+import TeamAiAnalysis from "./components/TeamAiAnalysis";
 import OddsConverter from "@/app/home/components/OddsConverter";
 import computeFT from "@/lib/analysisEngine/computeFT";
 import { loadTeamData, TeamAdapterResult } from "@/lib/adapters/team";
@@ -31,7 +32,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<"dashboard" | "stats" | "odds">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "stats" | "odds" | "ai">("dashboard");
+  const [probabilityFilter, setProbabilityFilter] = useState<"FT" | "HT" | "2H">("FT");
   const [team, setTeam] = useState<TeamData>(null);
   const [league, setLeague] = useState<LeagueData>(null);
   const [stats, setStats] = useState<StatsState>(null);
@@ -85,6 +87,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       setTab("dashboard");
     } else if (tabParam === "odds") {
       setTab("odds");
+    } else if (tabParam === "ai") {
+      setTab("ai");
     }
   }, [tabParam]);
 
@@ -377,12 +381,12 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-nowrap gap-3 mb-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 sm:flex-wrap sm:overflow-visible">
         {[50, 40, 30, 20, 10].map((n) => (
           <button
             key={n}
             onClick={() => setRange(n)}
-            className={`px-2 py-1 text-sm rounded ${
+            className={`px-2 py-1 text-sm rounded snap-start whitespace-nowrap ${
               range === n
                 ? "bg-green-600 text-white"
                 : "bg-white/20 text-white hover:bg-white/30"
@@ -394,7 +398,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
         <button
           onClick={() => setRange("season")}
-          className={`px-2 py-1 text-sm rounded ${
+          className={`px-2 py-1 text-sm rounded snap-start whitespace-nowrap ${
             range === "season"
               ? "bg-green-600 text-white"
               : "bg-white/20 text-white hover:bg-white/30"
@@ -404,13 +408,13 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-6 border-b pb-2">
+      <div className="flex flex-nowrap gap-4 mb-6 border-b pb-2 overflow-x-auto no-scrollbar snap-x snap-mandatory sm:flex-wrap sm:overflow-visible">
         <button
           onClick={() => setTab("dashboard")}
           className={
             tab === "dashboard"
-              ? "pb-2 border-b-2 border-white font-semibold text-white"
-              : "opacity-60 text-white/60 hover:text-white"
+              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
+              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
           Dashboard
@@ -420,8 +424,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           onClick={() => setTab("stats")}
           className={
             tab === "stats"
-              ? "pb-2 border-b-2 border-white font-semibold text-white"
-              : "opacity-60 text-white/60 hover:text-white"
+              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
+              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
           Probabilités
@@ -431,11 +435,22 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           onClick={() => setTab("odds")}
           className={
             tab === "odds"
-              ? "pb-2 border-b-2 border-white font-semibold text-white"
-              : "opacity-60 text-white/60 hover:text-white"
+              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
+              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
           Convertisseur
+        </button>
+
+        <button
+          onClick={() => setTab("ai")}
+          className={
+            tab === "ai"
+              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
+              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
+          }
+        >
+          IA
         </button>
       </div>
 
@@ -455,13 +470,27 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           nextOpponentName={nextOpponentName}
           overUnderMatchKeys={overUnderMatchKeys}
           overUnderHighlight={overUnderHighlight}
+          filter={probabilityFilter}
+          onFilterChange={setProbabilityFilter}
         />
       ) : (
-        <div className="max-w-4xl">
-          <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-            <OddsConverter />
+        tab === "odds" ? (
+          <div className="max-w-4xl">
+            <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+              <OddsConverter />
+            </div>
           </div>
-        </div>
+        ) : (
+          <TeamAiAnalysis
+            team={team}
+            league={league}
+            nextMatch={nextMatch}
+            fixtures={fixtures}
+            opponentFixtures={opponentFixtures}
+            filter={probabilityFilter}
+            nextOpponentName={nextOpponentName}
+          />
+        )
       )}
 
       <div className="mb-6 mt-6 p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded text-white">

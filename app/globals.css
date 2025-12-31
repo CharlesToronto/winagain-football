@@ -4,11 +4,11 @@
 
 :root {
   color-scheme: light;
-  --aurora-1: rgba(166, 2, 255, 0.212);
-  --aurora-2: rgba(10, 104, 128, 0.863);
+  --aurora-1: rgba(166, 2, 255, 0.178);
+  --aurora-2: rgba(3, 124, 155, 0.397);
   --aurora-3: rgba(68, 36, 143, 0.329);
   --aurora-4: rgba(68, 4, 77, 0.11);
-  --card-bg: rgba(34, 4, 32, 0.918);
+  --card-bg: rgba(34, 4, 32, 0.651);
   --card-bg-soft: rgba(255, 2, 2, 0);
 }
 
@@ -16,8 +16,8 @@ body {
   @apply min-h-screen text-gray-100;
   background-color: #0b0014;
   background-image:
-    radial-gradient(1200px 800px at 80% 10%, var(--aurora-2) 0%, transparent 70%),
-    radial-gradient(1800px 800px at 20% 35%, var(--aurora-1) 0%, transparent 60%),
+    radial-gradient(1200px 1000px at 70% 20%, var(--aurora-2) 0%, transparent 70%),
+    radial-gradient(1800px 1200px at 20% 55%, var(--aurora-1) 0%, transparent 60%),
     radial-gradient(1000px 900px at 30% 65%, var(--aurora-3) 0%, transparent 65%),
     radial-gradient(900px 14000px at 55% 90%, var(--aurora-4) 0%, transparent 90%);
   background-attachment: fixed;

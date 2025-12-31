@@ -153,20 +153,30 @@ export default function GoalsScoredTrendSection({
   const teamName = useMemo(() => resolveTeamName(fixtures ?? []), [fixtures]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <GoalsScoredTrendCard
-        fixtures={fixtures ?? []}
-        opponentFixtures={opponentFixtures}
-        opponentName={opponentName}
-        referenceCount={referenceCount}
-        mode={mode}
-        teamName={teamName}
-        threshold={threshold}
-        onThresholdChange={setThreshold}
-        location={location}
-        onLocationChange={setLocation}
-      />
-      <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />
+    <div className="space-y-2">
+      <div className="flex items-center justify-center gap-2 md:hidden" aria-hidden="true">
+        <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+        <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+      </div>
+      <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible">
+        <div className="snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-2">
+          <GoalsScoredTrendCard
+            fixtures={fixtures ?? []}
+            opponentFixtures={opponentFixtures}
+            opponentName={opponentName}
+            referenceCount={referenceCount}
+            mode={mode}
+            teamName={teamName}
+            threshold={threshold}
+            onThresholdChange={setThreshold}
+            location={location}
+            onLocationChange={setLocation}
+          />
+        </div>
+        <div className="snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-1">
+          <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />
+        </div>
+      </div>
     </div>
   );
 }

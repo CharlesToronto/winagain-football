@@ -48,6 +48,8 @@ export default function ProbabilitiesView({
   range,
   overUnderMatchKeys,
   overUnderHighlight,
+  filter,
+  onFilterChange,
 }: {
   fixtures: Fixture[];
   nextOpponentId?: number | null;
@@ -55,9 +57,10 @@ export default function ProbabilitiesView({
   range?: RangeOption;
   overUnderMatchKeys?: Set<string>;
   overUnderHighlight?: boolean;
+  filter: FilterKey;
+  onFilterChange: (value: FilterKey) => void;
 }) {
   const router = useRouter();
-  const [filter, setFilter] = useState<FilterKey>("FT");
   const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [opponentFixtures, setOpponentFixtures] = useState<Fixture[]>([]);
 
@@ -139,7 +142,7 @@ export default function ProbabilitiesView({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => setFilter("FT")}
+            onClick={() => onFilterChange("FT")}
             className={`px-4 py-2 rounded-md ${
               filter === "FT" ? "bg-green-700 text-withe" : "bg-white/10"
             }`}
@@ -148,7 +151,7 @@ export default function ProbabilitiesView({
           </button>
 
           <button
-            onClick={() => setFilter("HT")}
+            onClick={() => onFilterChange("HT")}
             className={`px-4 py-2 rounded-md ${
               filter === "HT" ? "bg-green-600 text-white" : "bg-white/10"
             }`}
@@ -157,7 +160,7 @@ export default function ProbabilitiesView({
           </button>
 
           <button
-            onClick={() => setFilter("2H")}
+            onClick={() => onFilterChange("2H")}
             className={`px-4 py-2 rounded-md ${
               filter === "2H" ? "bg-green-600 text-white" : "bg-white/10"
             }`}
@@ -224,13 +227,21 @@ export default function ProbabilitiesView({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <CardGoals data={stats} streaks={streaks} opponentData={opponentStats} />
-        <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
-        <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
+        <div className="hidden">
+          <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
+        <div className="hidden">
+          <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <CardSeries data={stats} streaks={streaks} opponentData={opponentStats} />
-        <CardHalfFull data={stats} streaks={streaks} opponentData={opponentStats} />
+        <div className="hidden">
+          <CardSeries data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
+        <div className="hidden">
+          <CardHalfFull data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
       </div>
 
       <div className="mt-6 p-4 rounded-lg bg-white/10 text-white text-sm">

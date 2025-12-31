@@ -175,17 +175,27 @@ export default function GoalsTotalTrendSection({
   const entries = useMemo(() => buildEntries(fixtures ?? [], mode), [fixtures, mode]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
-      <GoalsTrendCard
-        fixtures={fixtures ?? []}
-        opponentFixtures={opponentFixtures}
-        opponentName={opponentName}
-        referenceCount={referenceCount}
-        mode={mode}
-        threshold={threshold}
-        onThresholdChange={setThreshold}
-      />
+    <div className="space-y-2">
+      <div className="flex items-center justify-center gap-2 md:hidden" aria-hidden="true">
+        <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+        <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+      </div>
+      <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible">
+        <div className="order-2 md:order-1 snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-1">
+          <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
+        </div>
+        <div className="order-1 md:order-2 snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-2">
+          <GoalsTrendCard
+            fixtures={fixtures ?? []}
+            opponentFixtures={opponentFixtures}
+            opponentName={opponentName}
+            referenceCount={referenceCount}
+            mode={mode}
+            threshold={threshold}
+            onThresholdChange={setThreshold}
+          />
+        </div>
+      </div>
     </div>
   );
 }
