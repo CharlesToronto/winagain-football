@@ -4,12 +4,59 @@
 
 :root {
   color-scheme: light;
+  --aurora-1: rgba(166, 2, 255, 0.212);
+  --aurora-2: rgba(10, 104, 128, 0.863);
+  --aurora-3: rgba(68, 36, 143, 0.329);
+  --aurora-4: rgba(68, 4, 77, 0.11);
+  --card-bg: rgba(34, 4, 32, 0.918);
+  --card-bg-soft: rgba(255, 2, 2, 0);
 }
 
 body {
   @apply min-h-screen text-gray-100;
-  background: linear-gradient(to bottom, #13002e, #5f2370);
+  background-color: #0b0014;
+  background-image:
+    radial-gradient(1200px 800px at 80% 10%, var(--aurora-2) 0%, transparent 70%),
+    radial-gradient(1800px 800px at 20% 35%, var(--aurora-1) 0%, transparent 60%),
+    radial-gradient(1000px 900px at 30% 65%, var(--aurora-3) 0%, transparent 65%),
+    radial-gradient(900px 14000px at 55% 90%, var(--aurora-4) 0%, transparent 90%);
+  background-attachment: fixed;
+  background-size: 170% 170%, 190% 190%, 180% 180%, 200% 200%;
+  background-blend-mode: screen, screen, screen, screen;
+  animation: aurora-diagonal 18s ease-in-out infinite alternate;
   min-height: 100vh;
+}
+
+.team-page {
+  --card-bg: rgba(0, 0, 0, 0.2);
+  --card-bg-soft: rgba(95, 88, 122, 0.062);
+}
+
+:is(div, section, article, aside).bg-white\/10 {
+  background-color: var(--card-bg);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+:is(div, section, article, aside).bg-white\/5 {
+  background-color: var(--card-bg-soft);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+@keyframes aurora-diagonal {
+  10% {
+    background-position: 0% 0%, 15% 5%, 5% 20%, 20% 15%;
+  }
+  100% {
+    background-position: 100% 100%, 85% 25%, 95% 50%, 40% 85%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none;
+  }
 }
 
 * {
@@ -28,7 +75,10 @@ body {
 }
 
 .glass-card {
-  @apply bg-white/10 rounded-xl shadow-soft border border-white/10 backdrop-blur-md;
+  @apply rounded-xl shadow-soft border border-white/10 backdrop-blur-md;
+  background-color: var(--card-bg);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
 }
 
 .section-title {

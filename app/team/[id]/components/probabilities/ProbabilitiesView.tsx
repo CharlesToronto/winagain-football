@@ -8,7 +8,8 @@ import CardCorners from "./CardCorners";
 import CardCards from "./CardCards";
 import CardSeries from "./CardSeries";
 import CardHalfFull from "./CardHalfFull";
-import GoalsTrendCard from "./GoalsTrendCard";
+import GoalsTotalTrendSection from "./GoalsTotalTrendSection";
+import GoalsScoredTrendSection from "./GoalsScoredTrendSection";
 import CardDoubleChance from "./CardDoubleChance";
 import CardOverUnderHomeAway from "./CardOverUnderHomeAway";
 import CardGoalsSplit from "./CardGoalsSplit";
@@ -140,7 +141,7 @@ export default function ProbabilitiesView({
           <button
             onClick={() => setFilter("FT")}
             className={`px-4 py-2 rounded-md ${
-              filter === "FT" ? "bg-green-600 text-white" : "bg-white/10"
+              filter === "FT" ? "bg-green-700 text-withe" : "bg-white/10"
             }`}
           >
             Full Game
@@ -188,6 +189,14 @@ export default function ProbabilitiesView({
         />
       </div>
 
+      <GoalsScoredTrendSection
+        fixtures={fixtures ?? []}
+        opponentFixtures={opponentFixtures}
+        opponentName={nextOpponentName ?? "Adversaire"}
+        referenceCount={fixtures?.length ?? 0}
+        mode={filter}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <CardOverUnder
           data={stats}
@@ -205,15 +214,13 @@ export default function ProbabilitiesView({
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <GoalsTrendCard
-          fixtures={fixtures ?? []}
-          opponentFixtures={opponentFixtures}
-          opponentName={nextOpponentName ?? "Adversaire"}
-          referenceCount={fixtures?.length ?? 0}
-          mode={filter}
-        />
-      </div>
+      <GoalsTotalTrendSection
+        fixtures={fixtures ?? []}
+        opponentFixtures={opponentFixtures}
+        opponentName={nextOpponentName ?? "Adversaire"}
+        referenceCount={fixtures?.length ?? 0}
+        mode={filter}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <CardGoals data={stats} streaks={streaks} opponentData={opponentStats} />

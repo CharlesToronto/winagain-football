@@ -10,7 +10,7 @@ export default function Sidebar() {
     <div
       className="
     h-full w-64
-    bg-gradient-to-b from-[#13002e]/80 to-[#5f2370]/80
+    bg-transparent
     backdrop-blur-xl
     border-r border-white/10
     text-white

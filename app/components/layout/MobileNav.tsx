@@ -9,7 +9,7 @@ export default function MobileNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden mobile-show">
-      <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-[#13002e]/80 backdrop-blur-xl">
+      <div className="mx-3 mb-3 rounded-2xl border border-white/10 bg-[rgba(151,17,161,0.45)] backdrop-blur-xl">
         <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon;

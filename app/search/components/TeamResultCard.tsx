@@ -22,6 +22,13 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
         <div>Dernier match : {new Date(team.lastMatchDate).toLocaleString("fr-FR")}</div>
         <div>Adversaire : {team.opponent}</div>
         <div>Marche : {formatMarket(team.market)}</div>
+        {team.nextMatchBelow?.line != null && team.nextMatchBelow?.percent != null ? (
+          <div>
+            Match suivant sous +{formatNumber(team.nextMatchBelow.line)} :{" "}
+            {team.nextMatchBelow.percent}% ({team.nextMatchBelow.belowNext ?? 0}/
+            {team.nextMatchBelow.triggers ?? 0})
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -81,5 +88,10 @@ function formatMarket(m: string) {
     default:
       return m;
   }
+}
+
+function formatNumber(value: number) {
+  const rounded = Math.round(value * 100) / 100;
+  return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(2);
 }
 

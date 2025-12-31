@@ -8,6 +8,14 @@ type Filters = Partial<SearchFilters>;
 
 const CURRENT_SEASON = 2025;
 
+type NextMatchBelowSummary = {
+  lastValue: number | null;
+  lastAbove: boolean;
+  triggers: number;
+  belowNext: number;
+  percent: number;
+};
+
 function pickProb(
   market: MarketType,
   stats: any,
@@ -118,6 +126,59 @@ function getStreakLength(fixtures: any[], teamId: number, filters: SearchFilters
   return streak;
 }
 
+function computeNextMatchBelow(
+  fixtures: any[],
+  threshold: number
+): NextMatchBelowSummary {
+  if (!fixtures || fixtures.length === 0) {
+    return {
+      lastValue: null,
+      lastAbove: false,
+      triggers: 0,
+      belowNext: 0,
+      percent: 0,
+    };
+  }
+
+  const ordered = [...fixtures].reverse();
+  const values = ordered
+    .filter((f) => f?.goals_home != null && f?.goals_away != null)
+    .map((f) => (f.isHome ? f.goals_home : f.goals_away));
+
+  if (values.length === 0) {
+    return {
+      lastValue: null,
+      lastAbove: false,
+      triggers: 0,
+      belowNext: 0,
+      percent: 0,
+    };
+  }
+
+  let triggers = 0;
+  let belowNext = 0;
+  for (let i = 0; i < values.length - 1; i += 1) {
+    if (values[i] > threshold) {
+      triggers += 1;
+      if (values[i + 1] < threshold) {
+        belowNext += 1;
+      }
+    }
+  }
+
+  const percent = triggers ? Math.round((belowNext / triggers) * 100) : 0;
+  const lastValue = values[values.length - 1] ?? null;
+  const lastAbove = lastValue !== null && lastValue > threshold;
+
+  return {
+    lastValue,
+    lastAbove,
+    triggers,
+    belowNext,
+    percent,
+  };
+}
+
 export async function POST(req: Request) {
   const supabase = createClient();
 
@@ -153,7 +214,24 @@ export async function POST(req: Request) {
       typeof body.streakMin === "number"
         ? body.streakMin
         : Number(body.streakMin) || 1,
+    nextMatchBelowEnabled: Boolean(body.nextMatchBelowEnabled),
+    nextMatchBelowLine:
+      typeof body.nextMatchBelowLine === "number"
+        ? body.nextMatchBelowLine
+        : Number(body.nextMatchBelowLine) || 1.5,
+    nextMatchBelowMinPercent:
+      typeof body.nextMatchBelowMinPercent === "number"
+        ? body.nextMatchBelowMinPercent
+        : body.nextMatchBelowMinPercent === "" || body.nextMatchBelowMinPercent == null
+        ? undefined
+        : Number(body.nextMatchBelowMinPercent),
   };
+  if (
+    typeof filters.nextMatchBelowMinPercent === "number" &&
+    !Number.isFinite(filters.nextMatchBelowMinPercent)
+  ) {
+    filters.nextMatchBelowMinPercent = undefined;
+  }
 
   // 1) Charger toutes les fixtures FT de la saison courante (recent -> ancien)
   const { data: seasonFixtures, error: fixturesError } = await supabase
@@ -224,6 +302,20 @@ export async function POST(req: Request) {
       if (streak < streakMin) continue;
     }
 
+    let nextMatchBelow: NextMatchBelowSummary | null = null;
+    if (filters.nextMatchBelowEnabled) {
+      const line =
+        typeof filters.nextMatchBelowLine === "number" ? filters.nextMatchBelowLine : 1.5;
+      nextMatchBelow = computeNextMatchBelow(mapped, line);
+      if (!nextMatchBelow.lastAbove || nextMatchBelow.triggers === 0) continue;
+      if (
+        typeof filters.nextMatchBelowMinPercent === "number" &&
+        nextMatchBelow.percent < filters.nextMatchBelowMinPercent
+      ) {
+        continue;
+      }
+    }
+
     const stats = computeFT(mapped);
     const streaks = computeStreaks(mapped);
 
@@ -249,6 +341,17 @@ export async function POST(req: Request) {
       probGreen: green,
       probBlue: blue ?? 0,
       aboveAverage: green >= 50,
+      nextMatchBelow: nextMatchBelow
+        ? {
+            percent: nextMatchBelow.percent,
+            belowNext: nextMatchBelow.belowNext,
+            triggers: nextMatchBelow.triggers,
+            line:
+              typeof filters.nextMatchBelowLine === "number"
+                ? filters.nextMatchBelowLine
+                : undefined,
+          }
+        : undefined,
     });
   }
 

@@ -7,6 +7,8 @@ const DEFAULT_FILTERS: SearchFilters = {
   overUnderLine: 2.5,
   resultType: "1X",
   streakMin: 1,
+  nextMatchBelowEnabled: false,
+  nextMatchBelowLine: 1.5,
 };
 
 export function useSearchTeams(initial: SearchFilters = DEFAULT_FILTERS) {

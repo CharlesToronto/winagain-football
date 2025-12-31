@@ -36,11 +36,18 @@ export function SearchFilters({
   onSearch: () => void;
   loading: boolean;
 }) {
+  const selectClassName =
+    "rounded bg-[#1f0f3a] border border-white/20 px-2 py-2 text-sm text-white [color-scheme:dark]";
   const factType = filters.factType ?? "none";
   const streakMin = filters.streakMin ?? 1;
   const overUnderDirection = filters.overUnderDirection ?? "OVER";
   const overUnderLine = filters.overUnderLine ?? 2.5;
   const resultType = filters.resultType ?? "1X";
+  const nextMatchBelowEnabled = filters.nextMatchBelowEnabled ?? false;
+  const nextMatchBelowLine = filters.nextMatchBelowLine ?? 1.5;
+  const nextMatchBelowMinPercent = filters.nextMatchBelowMinPercent;
+  const inputClassName =
+    "rounded bg-[#1f0f3a] border border-white/20 px-2 py-2 text-sm text-white [color-scheme:dark]";
 
   const updateFactType = (value: FactType) => {
     const next: SearchFilters = { ...filters, factType: value };
@@ -65,7 +72,7 @@ export function SearchFilters({
         <div className="flex flex-col gap-2">
           <label className="text-sm text-white/70">Condition dernier match</label>
           <select
-            className="rounded bg-white/10 px-2 py-2 text-sm"
+            className={selectClassName}
             value={factType}
             onChange={(e) => updateFactType(e.target.value as FactType)}
           >
@@ -82,7 +89,7 @@ export function SearchFilters({
           {factType === "OVER_UNDER" ? (
             <div className="flex items-center gap-2">
               <select
-                className="rounded bg-white/10 px-2 py-2 text-sm"
+                className={selectClassName}
                 value={overUnderDirection}
                 onChange={(e) =>
                   onChange({
@@ -95,7 +102,7 @@ export function SearchFilters({
                 <option value="UNDER">Under</option>
               </select>
               <select
-                className="rounded bg-white/10 px-2 py-2 text-sm"
+                className={selectClassName}
                 value={overUnderLine}
                 onChange={(e) =>
                   onChange({
@@ -115,7 +122,7 @@ export function SearchFilters({
 
           {factType === "RESULT" ? (
             <select
-              className="rounded bg-white/10 px-2 py-2 text-sm"
+              className={selectClassName}
               value={resultType}
               onChange={(e) =>
                 onChange({
@@ -146,7 +153,7 @@ export function SearchFilters({
         <div className="flex flex-col gap-2">
           <label className="text-sm text-white/70">Serie en cours (min)</label>
           <select
-            className="rounded bg-white/10 px-2 py-2 text-sm"
+            className={selectClassName}
             value={streakMin}
             onChange={(e) =>
               onChange({
@@ -164,6 +171,72 @@ export function SearchFilters({
           </select>
           <span className="text-xs text-white/50">
             La serie part du dernier match.
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-white/70">Match suivant sous</label>
+          <button
+            type="button"
+            onClick={() =>
+              onChange({ ...filters, nextMatchBelowEnabled: !nextMatchBelowEnabled })
+            }
+            className={`rounded px-3 py-2 text-sm font-semibold transition ${
+              nextMatchBelowEnabled
+                ? "bg-green-600 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            {nextMatchBelowEnabled ? "Actif" : "Inactif"}
+          </button>
+          <span className="text-xs text-white/60">
+            BasAc sur les buts marquAcs par l'Acquipe.
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-white/70">Seuil buts marquAcs</label>
+          <select
+            className={selectClassName}
+            value={nextMatchBelowLine}
+            onChange={(e) =>
+              onChange({
+                ...filters,
+                nextMatchBelowLine: Number(e.target.value),
+              })
+            }
+            disabled={!nextMatchBelowEnabled}
+          >
+            {OVER_UNDER_LINES.map((line) => (
+              <option key={line} value={line}>
+                +{line}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-white/70">% minimum</label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            placeholder="Ex: 60"
+            className={inputClassName}
+            value={nextMatchBelowMinPercent ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...filters,
+                nextMatchBelowMinPercent:
+                  e.target.value === "" ? undefined : Number(e.target.value),
+              })
+            }
+            disabled={!nextMatchBelowEnabled}
+          />
+          <span className="text-xs text-white/50">
+            Laisse vide pour tout afficher.
           </span>
         </div>
       </div>

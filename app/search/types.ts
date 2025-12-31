@@ -29,6 +29,7 @@ export type TeamResult = {
   probGreen: number;
   probBlue: number;
   aboveAverage?: boolean;
+  nextMatchBelow?: NextMatchBelowMeta;
 };
 
 export type SearchFilters = {
@@ -37,4 +38,14 @@ export type SearchFilters = {
   overUnderLine?: number;
   resultType?: ResultType;
   streakMin?: number;
+  nextMatchBelowEnabled?: boolean;
+  nextMatchBelowLine?: number;
+  nextMatchBelowMinPercent?: number;
+};
+
+export type NextMatchBelowMeta = {
+  percent?: number;
+  belowNext?: number;
+  triggers?: number;
+  line?: number;
 };
