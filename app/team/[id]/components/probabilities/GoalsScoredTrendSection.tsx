@@ -86,7 +86,7 @@ function NextMatchBelowCard({
     : `Aucun match au-dessus de ${thresholdLabel}`;
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4 h-full">
+    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4 h-[20rem]">
       <div>
         <h3 className="font-semibold">Match suivant sous {thresholdLabel}</h3>
         <p className="text-xs text-white/70">
@@ -172,8 +172,8 @@ export default function GoalsScoredTrendSection({
               <AiPromptButton
                 onClick={() =>
                   onAiPrompt(
-                    "Tendance buts (marques)",
-                    `Buts marques | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                    "Tendance buts (Marqués)",
+                    `Buts Marqués | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
                   )
                 }
               />
@@ -199,7 +199,7 @@ export default function GoalsScoredTrendSection({
                 onClick={() =>
                   onAiPrompt(
                     `Match suivant sous ${thresholdLabel}`,
-                    `Buts marques | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                    `Buts Marqués | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
                   )
                 }
               />

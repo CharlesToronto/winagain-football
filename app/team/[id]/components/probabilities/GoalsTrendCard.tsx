@@ -238,7 +238,7 @@ export default function GoalsTrendCard({
       : null;
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2">
+    <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2 h-[20rem] flex flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts (total par match)</h3>
@@ -306,7 +306,7 @@ export default function GoalsTrendCard({
       {points.length === 0 ? (
         <p className="text-sm text-white/70">Aucune donnée disponible.</p>
       ) : (
-        <div className="relative w-full h-60 select-none">
+        <div className="relative w-full flex-1 min-h-0 select-none">
           <svg
             viewBox={`0 0 ${viewWidth} ${viewHeight}`}
             preserveAspectRatio="none"

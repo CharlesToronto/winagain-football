@@ -267,7 +267,7 @@ export default function GoalsScoredTrendCard({
   const resolvedTeamName = teamName || "Equipe";
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2">
+    <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2 h-[20rem] flex flex-col">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts {resolvedTeamName}</h3>
@@ -352,13 +352,13 @@ export default function GoalsScoredTrendCard({
       {points.length === 0 ? (
         <p className="text-sm text-white/70">Aucune donnee disponible.</p>
       ) : (
-        <div className="relative w-full h-[22.5rem] select-none">
+        <div className="relative w-full flex-1 min-h-0 select-none">
           <svg
             viewBox={`0 0 ${viewWidth} ${viewHeight}`}
             preserveAspectRatio="none"
             className="w-full h-full"
           >
-            {Array.from({ length: MAX_GOALS }).map((_, idx) => {
+            {Array.from({ length: MAX_GOALS - 2 }).map((_, idx) => {
               const label = idx + 1;
               const y = viewHeight - (label / MAX_GOALS) * viewHeight;
               return (
@@ -506,7 +506,7 @@ export default function GoalsScoredTrendCard({
                 <div className="opacity-80">Score : {hoveredPoint.tooltip.score}</div>
               )}
               <div className="mt-1 text-green-300">
-                Buts marques : {formatNumber(hoveredPoint.value)}
+                Buts Marqués : {formatNumber(hoveredPoint.value)}
               </div>
               {showOpponent && hoveredOpponent && (
                 <div className="mt-1 text-orange-300">
@@ -521,7 +521,7 @@ export default function GoalsScoredTrendCard({
       <div className="mt-3 flex items-center gap-4 text-xs text-white/70">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-sm bg-green-400 inline-block" />
-          <span>Buts marques par match</span>
+          <span>Buts Marqués par match</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-0.5 bg-white/80 inline-block" />

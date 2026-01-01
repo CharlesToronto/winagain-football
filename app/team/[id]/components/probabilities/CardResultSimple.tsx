@@ -33,7 +33,7 @@ export default function CardResultSimple({
 
   return (
     <div className="card bg-white/5 rounded-xl p-6 shadow">
-      <h3 className="font-semibold mb-3">RAcsultats</h3>
+      <h3 className="font-semibold mb-3">Résultats</h3>
       <div className="space-y-1">
         <StatRow
           label="Victoire"
@@ -56,7 +56,7 @@ export default function CardResultSimple({
           }
         />
         <StatRow
-          label="DAcfaite"
+          label="Défaite"
           count={`(${lose.raw}/${total})`}
           percentGreen={`${lose.percent}%`}
           percentOrange={showOpponent ? `${opponentLose.percent}%` : undefined}
@@ -72,7 +72,7 @@ export default function CardResultSimple({
           Buts & scoring
         </div>
         <StatRow
-          label="BTTS (Les 2 Acquipes marquent)"
+          label="BTS"
           count={`(${btts.raw}/${total})`}
           percentGreen={`${btts.percent}%`}
           percentOrange={showOpponent ? `${opponentBtts.percent}%` : undefined}

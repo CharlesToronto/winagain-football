@@ -64,7 +64,7 @@ export default function CardOverUnderHomeAway({
     Boolean(highlightActive && highlightKeys?.has(`${type}:${key}`));
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow group relative overflow-hidden">
+    <div className="bg-white/5 rounded-xl p-6 shadow group relative overflow-hidden h-[20rem]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold">Over / Under ({side === "home" ? "Home" : "Away"})</h3>
         <div className="flex gap-2">

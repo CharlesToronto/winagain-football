@@ -29,7 +29,7 @@ export default function CardGoals({
     <div className="bg-white/5 rounded-xl p-6 shadow">
       <h3 className="font-semibold mb-3">Buts & scoring</h3>
       <div className="space-y-1">
-        <StatRow label="BTTS (Les 2 équipes marquent)" count={`(${btts.raw}/${total})`} percentGreen={`${btts.percent}%`} percentOrange={showOpponent ? `${opponentBtts.percent}%` : undefined} percentBlue={resolvedStreaks?.btts?.active ? `${resolvedStreaks.btts.percent}%` : "–"} />
+        <StatRow label="BTS" count={`(${btts.raw}/${total})`} percentGreen={`${btts.percent}%`} percentOrange={showOpponent ? `${opponentBtts.percent}%` : undefined} percentBlue={resolvedStreaks?.btts?.active ? `${resolvedStreaks.btts.percent}%` : "–"} />
         <StatRow label="Clean Sheet Home" count={`(${cleanHome.raw}/${total})`} percentGreen={`${cleanHome.percent}%`} percentOrange={showOpponent ? `${opponentCleanHome.percent}%` : undefined} percentBlue={resolvedStreaks?.clean_home?.active ? `${resolvedStreaks.clean_home.percent}%` : "–"} />
         <StatRow label="Clean Sheet Away" count={`(${cleanAway.raw}/${total})`} percentGreen={`${cleanAway.percent}%`} percentOrange={showOpponent ? `${opponentCleanAway.percent}%` : undefined} percentBlue={resolvedStreaks?.clean_away?.active ? `${resolvedStreaks.clean_away.percent}%` : "–"} />
       </div>

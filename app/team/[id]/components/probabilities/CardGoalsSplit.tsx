@@ -78,7 +78,7 @@ export default function CardGoalsSplit({ fixtures }: { fixtures: Fixture[] }) {
 
   return (
     <div className="card bg-white/5 rounded-xl p-6 shadow">
-      <h3 className="font-semibold mb-3">Buts marques / encaisses</h3>
+      <h3 className="font-semibold mb-3">Buts Marqués / Encaissés</h3>
       <div className="space-y-3">
         {sections.map((section, idx) => (
           <div
@@ -91,12 +91,12 @@ export default function CardGoalsSplit({ fixtures }: { fixtures: Fixture[] }) {
             </div>
             <div className="mt-2 space-y-1">
               <GoalsRow
-                label="Marques"
+                label="Marqués"
                 value={section.data.goalsFor}
                 avg={section.data.avgFor}
               />
               <GoalsRow
-                label="Encaisses"
+                label="Encaissés"
                 value={section.data.goalsAgainst}
                 avg={section.data.avgAgainst}
               />

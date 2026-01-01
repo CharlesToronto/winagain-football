@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import CardResultSimple from "./CardResultSimple";
 import CardOverUnder from "./CardOverUnder";
-import CardGoals from "./CardGoals";
 import CardCorners from "./CardCorners";
 import CardCards from "./CardCards";
 import CardSeries from "./CardSeries";
@@ -234,7 +233,7 @@ export default function ProbabilitiesView({
           </div>
         </div>
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Buts marques / encaisses")} />
+          <AiPromptButton onClick={() => handleAiPrompt("Buts Marqués / Encaissés")} />
           <CardGoalsSplit fixtures={fixtures ?? []} />
         </div>
       </div>
@@ -245,7 +244,7 @@ export default function ProbabilitiesView({
           <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
         </div>
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Buts marques / encaisses")} />
+          <AiPromptButton onClick={() => handleAiPrompt("Buts Marqués / Encaissés")} />
           <CardGoalsSplit fixtures={fixtures ?? []} />
         </div>
         <div className="space-y-2">
@@ -301,17 +300,11 @@ export default function ProbabilitiesView({
         onAiPrompt={handleAiPrompt}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Buts")} />
-          <CardGoals data={stats} streaks={streaks} opponentData={opponentStats} />
-        </div>
-        <div className="hidden">
-          <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
-        </div>
-        <div className="hidden">
-          <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
-        </div>
+      <div className="hidden">
+        <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
+      </div>
+      <div className="hidden">
+        <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">

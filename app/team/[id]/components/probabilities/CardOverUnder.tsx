@@ -31,7 +31,7 @@ export default function CardOverUnder({
     Boolean(highlightActive && highlightKeys?.has(`${type}:${key}`));
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow">
+    <div className="bg-white/5 rounded-xl p-6 shadow h-[20rem]">
       <h3 className="font-semibold mb-3">Over / Under</h3>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
