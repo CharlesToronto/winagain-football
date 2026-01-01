@@ -729,10 +729,8 @@ export default function TeamAiAnalysis({
           <div className="flex items-center gap-3">
             <CharlyLottie className="w-12 h-12 shrink-0" />
             <div>
-              <h2 className="text-lg font-semibold">Analyse IA</h2>
-              <p className="text-xs text-white/70">
-                Basee sur les calculs Probabilites (filtre: {filter}).
-              </p>
+              <h2 className="text-lg font-semibold">Charly IA</h2>
+              <p className="text-xs text-white/70">By WinAgain Pronostic</p>
             </div>
           </div>
           <button
