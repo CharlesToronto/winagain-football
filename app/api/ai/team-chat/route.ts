@@ -61,8 +61,13 @@ export async function POST(req: Request) {
 
   const systemPrompt =
     "Tu es un analyste football. Reponds en francais, concis, utile, " +
-    "en te basant sur le contexte. Si une info manque, dis-le clairement. " +
-    "Si pertinent, mets en avant les stats entre 70-100% ou 0-30%.";
+    "en te basant sur le contexte. " +
+    "Si l'utilisateur demande une liste, reponds en liste Markdown. " +
+    "Utilise des titres en Markdown (##) quand tu structures la reponse. " +
+    "Si une info manque, dis-le clairement. " +
+    "Si pertinent, mets en avant les stats entre 70-100% ou 0-30%. " +
+    "Les listes de matchs sont ordonnees du plus recent au plus ancien. " +
+    "Utilise recentFixtures/recentStats (50 matchs) pour les comparaisons si besoin.";
 
   const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",

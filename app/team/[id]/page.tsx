@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
 import TeamAiAnalysis from "./components/TeamAiAnalysis";
 import OddsConverter from "@/app/home/components/OddsConverter";
+import StandingsList from "@/app/league/[id]/StandingsList";
 import computeFT from "@/lib/analysisEngine/computeFT";
 import { loadTeamData, TeamAdapterResult } from "@/lib/adapters/team";
 import { FAVORITES_STORAGE_KEY, type FavoriteTeam } from "@/lib/favorites";
@@ -32,11 +33,12 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<"dashboard" | "stats" | "odds" | "ai">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "stats" | "odds">("dashboard");
   const [probabilityFilter, setProbabilityFilter] = useState<"FT" | "HT" | "2H">("FT");
   const [team, setTeam] = useState<TeamData>(null);
   const [league, setLeague] = useState<LeagueData>(null);
   const [stats, setStats] = useState<StatsState>(null);
+  const [standings, setStandings] = useState<any[]>([]);
   const [range, setRange] = useState<RangeOption>("season");
   const [fixtures, setFixtures] = useState<FixtureItem[]>([]);
   const [nextMatch, setNextMatch] = useState<NextMatch>(null);
@@ -88,7 +90,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     } else if (tabParam === "odds") {
       setTab("odds");
     } else if (tabParam === "ai") {
-      setTab("ai");
+      setTab("dashboard");
     }
   }, [tabParam]);
 
@@ -101,9 +103,11 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         setFixtures(result.fixtures);
         setStats(result.stats);
         setNextMatch(result.nextMatch);
+        setStandings(result.standings ?? []);
       } catch (e) {
         setStats(null);
         setFixtures([]);
+        setStandings([]);
       }
       setLoading(false);
     }
@@ -417,7 +421,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
               : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
-          Dashboard
+          Charly IA
         </button>
 
         <button
@@ -441,17 +445,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         >
           Convertisseur
         </button>
-
-        <button
-          onClick={() => setTab("ai")}
-          className={
-            tab === "ai"
-              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
-              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
-          }
-        >
-          IA
-        </button>
       </div>
 
       {tab === "dashboard" ? (
@@ -461,10 +454,17 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           fixtures={fixtures}
           team={team}
           nextMatch={nextMatch}
+          standings={standings}
+          opponentFixtures={opponentFixtures}
+          filter={probabilityFilter}
+          range={range}
+          nextOpponentName={nextOpponentName}
+          nextOpponentId={nextOpponentId}
         />
       ) : tab === "stats" ? (
         <ProbabilitiesView
           fixtures={fixtures}
+          teamId={teamId}
           range={range}
           nextOpponentId={nextOpponentId}
           nextOpponentName={nextOpponentName}
@@ -474,25 +474,12 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           onFilterChange={setProbabilityFilter}
         />
       ) : (
-        tab === "odds" ? (
-          <div className="max-w-4xl">
-            <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-              <OddsConverter />
-            </div>
+        <div className="max-w-4xl">
+          <div className="p-6 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+            <OddsConverter />
           </div>
-        ) : (
-          <TeamAiAnalysis
-            team={team}
-            league={league}
-            nextMatch={nextMatch}
-            fixtures={fixtures}
-            opponentFixtures={opponentFixtures}
-            filter={probabilityFilter}
-            nextOpponentName={nextOpponentName}
-          />
-        )
+        </div>
       )}
-
       <div className="mb-6 mt-6 p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded text-white">
         <h2 className="font-semibold mb-2">Debug fixtures</h2>
         <p className="text-xs opacity-70 text-white/70">
@@ -652,18 +639,31 @@ function DashboardView({
   fixtures,
   team,
   nextMatch,
+  standings,
+  opponentFixtures,
+  filter,
+  range,
+  nextOpponentName,
+  nextOpponentId,
 }: {
   stats: any;
   league: any;
   fixtures: FixtureItem[];
   team: any;
   nextMatch: NextMatch;
+  standings: any[];
+  opponentFixtures: FixtureItem[];
+  filter: "FT" | "HT" | "2H";
+  range: RangeOption;
+  nextOpponentName: string | null;
+  nextOpponentId: number | null;
 }) {
   if (!stats) return <p className="opacity-60">Aucune statistique disponible.</p>;
 
   const [showAllForm, setShowAllForm] = useState<boolean>(false);
-  const teamId = Number(team?.id);
   const fixturesLimited = fixtures || [];
+
+  const standingsTable = Array.isArray(standings) ? standings : [];
 
   // Filtrer les fixtures valides (sécurise contre undefined)
   const validFixtures = fixturesLimited.filter(
@@ -705,6 +705,29 @@ function DashboardView({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <TeamAiAnalysis
+        team={team}
+        league={league}
+        nextMatch={nextMatch}
+        fixtures={fixtures}
+        opponentFixtures={opponentFixtures}
+        filter={filter}
+        range={range}
+        nextOpponentName={nextOpponentName}
+        nextOpponentId={nextOpponentId}
+      />
+
+      <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+        <h2 className="font-semibold text-lg mb-3">Classement</h2>
+        {standingsTable.length ? (
+          <div className="max-h-[420px] overflow-y-auto pr-2">
+            <StandingsList table={standingsTable} opponentByTeam={{}} />
+          </div>
+        ) : (
+          <p className="text-sm opacity-70">Classement indisponible.</p>
+        )}
+      </div>
 
       <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
         <h2 className="font-semibold text-lg mb-3">Résumé</h2>
@@ -763,10 +786,10 @@ function DashboardView({
               </div>
 
               {/* Match Banner */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
+              <div className="flex items-center justify-between gap-3 w-full">
 
                 {/* Home */}
-                <div className="flex flex-col items-center w-full sm:w-1/3">
+                <div className="flex flex-col items-center flex-1 min-w-0">
                     <img
                         src={computedNextMatch.teams.home.logo}
                         alt={computedNextMatch.teams.home.name}
@@ -776,7 +799,7 @@ function DashboardView({
                 </div>
 
                 {/* Score or VS */}
-                <div className="flex flex-col items-center w-full sm:w-1/3">
+                <div className="flex flex-col items-center flex-1 min-w-0">
                     {computedNextMatch.fixture.status.short === "NS" ? (
                         <p className="text-lg font-bold">VS</p>
                     ) : (
@@ -788,7 +811,7 @@ function DashboardView({
                 </div>
 
                 {/* Away */}
-                <div className="flex flex-col items-center w-full sm:w-1/3">
+                <div className="flex flex-col items-center flex-1 min-w-0">
                     <img
                         src={computedNextMatch.teams.away.logo}
                         alt={computedNextMatch.teams.away.name}
@@ -911,6 +934,3 @@ function formatRatio(value: number, total: number) {
   const rounded = Math.round(ratio * 100) / 100;
   return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(2);
 }
-
-
-

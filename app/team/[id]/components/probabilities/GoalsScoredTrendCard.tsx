@@ -352,7 +352,7 @@ export default function GoalsScoredTrendCard({
       {points.length === 0 ? (
         <p className="text-sm text-white/70">Aucune donnee disponible.</p>
       ) : (
-        <div className="relative w-full h-60 select-none">
+        <div className="relative w-full h-[22.5rem] select-none">
           <svg
             viewBox={`0 0 ${viewWidth} ${viewHeight}`}
             preserveAspectRatio="none"

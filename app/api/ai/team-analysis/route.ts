@@ -86,9 +86,14 @@ export async function POST(req: Request) {
   const systemPrompt =
     "Tu es un analyste football. Tu dois resumer la situation de l'equipe et du prochain adversaire " +
     "a partir des donnees JSON. Reponds en francais, concis, clair, sans inventer. " +
-    "Format: 1) Bilan en 3-5 phrases. 2) Points cles en 3-6 puces courtes. " +
+    "Format Markdown strict: " +
+    "## Bilan (3-5 phrases) " +
+    "## Points cles (3-6 puces avec '-') " +
+    "Si une liste est demandee, reponds en liste Markdown. " +
     "Si une info manque, dis-le clairement. " +
-    "Mets en avant les stats entre 70-100% ou 0-30% si elles existent.";
+    "Mets en avant les stats entre 70-100% ou 0-30% si elles existent. " +
+    "Les listes de matchs sont ordonnees du plus recent au plus ancien. " +
+    "Base l'analyse sur stats/streaks (selection) et utilise recentFixtures/recentStats (50 matchs) pour comparer si besoin.";
   const userPrompt = `Donnees JSON:\n${JSON.stringify(payload)}`;
 
   try {

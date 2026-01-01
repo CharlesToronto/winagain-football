@@ -13,10 +13,11 @@ import GoalsScoredTrendSection from "./GoalsScoredTrendSection";
 import CardDoubleChance from "./CardDoubleChance";
 import CardOverUnderHomeAway from "./CardOverUnderHomeAway";
 import CardGoalsSplit from "./CardGoalsSplit";
+import AiPromptButton from "./AiPromptButton";
 
 import { getProbabilityEngines } from "@/lib/adapters/probabilities";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Fixture = any;
 type FilterKey = "FT" | "HT" | "2H";
@@ -43,6 +44,7 @@ function selectOpponentFixtures(fixtures: Fixture[], range?: RangeOption) {
 
 export default function ProbabilitiesView({
   fixtures,
+  teamId,
   nextOpponentId,
   nextOpponentName,
   range,
@@ -52,6 +54,7 @@ export default function ProbabilitiesView({
   onFilterChange,
 }: {
   fixtures: Fixture[];
+  teamId?: number | null;
   nextOpponentId?: number | null;
   nextOpponentName?: string | null;
   range?: RangeOption;
@@ -61,6 +64,7 @@ export default function ProbabilitiesView({
   onFilterChange: (value: FilterKey) => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [opponentFixtures, setOpponentFixtures] = useState<Fixture[]>([]);
 
@@ -137,6 +141,24 @@ export default function ProbabilitiesView({
     router.push(`/team/${nextOpponentId}?tab=stats`);
   };
 
+  const handleAiPrompt = (cardTitle: string, detail?: string) => {
+    if (!Number.isFinite(teamId)) return;
+    const opponentLabel = nextOpponentName ?? "le prochain adversaire";
+    const detailSuffix = detail ? ` Contexte: ${detail}.` : "";
+    const keyPointsSuffix =
+      " Termine par 3 points cles (puces) sur le prochain match de l'equipe et du prochain adversaire, ou sur leurs series en cours si les infos de match manquent.";
+    const prompt = `Charly, que penses-tu des informations de la carte "${cardTitle}" (filtre ${filter}) pour l'equipe, et de la carte equivalente pour ${opponentLabel} ?${detailSuffix}${keyPointsSuffix}`;
+    try {
+      localStorage.setItem(
+        "team-ai-pending-prompt",
+        JSON.stringify({ teamId, prompt, createdAt: Date.now() })
+      );
+    } catch {
+      // Ignore storage failures
+    }
+    router.push(`${pathname}?tab=dashboard`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -180,16 +202,62 @@ export default function ProbabilitiesView({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
-        <CardGoalsSplit fixtures={fixtures ?? []} />
-        <CardDoubleChance
-          data={stats}
-          streaks={streaks}
-          opponentData={opponentStats}
-          highlightKeys={overUnderMatchKeys}
-          highlightActive={overUnderHighlight}
-        />
+      <div className="md:hidden space-y-6">
+        <div className="space-y-2">
+          <div className="flex items-center justify-center gap-2" aria-hidden="true">
+            <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+          </div>
+          <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory">
+            <div className="snap-start shrink-0 w-full">
+              <div className="space-y-2">
+                <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
+                <CardResultSimple
+                  data={stats}
+                  streaks={streaks}
+                  opponentData={opponentStats}
+                />
+              </div>
+            </div>
+            <div className="snap-start shrink-0 w-full">
+              <div className="space-y-2">
+                <AiPromptButton onClick={() => handleAiPrompt("Double chance")} />
+                <CardDoubleChance
+                  data={stats}
+                  streaks={streaks}
+                  opponentData={opponentStats}
+                  highlightKeys={overUnderMatchKeys}
+                  highlightActive={overUnderHighlight}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Buts marques / encaisses")} />
+          <CardGoalsSplit fixtures={fixtures ?? []} />
+        </div>
+      </div>
+
+      <div className="hidden md:grid md:grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
+          <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Buts marques / encaisses")} />
+          <CardGoalsSplit fixtures={fixtures ?? []} />
+        </div>
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Double chance")} />
+          <CardDoubleChance
+            data={stats}
+            streaks={streaks}
+            opponentData={opponentStats}
+            highlightKeys={overUnderMatchKeys}
+            highlightActive={overUnderHighlight}
+          />
+        </div>
       </div>
 
       <GoalsScoredTrendSection
@@ -198,23 +266,30 @@ export default function ProbabilitiesView({
         opponentName={nextOpponentName ?? "Adversaire"}
         referenceCount={fixtures?.length ?? 0}
         mode={filter}
+        onAiPrompt={handleAiPrompt}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CardOverUnder
-          data={stats}
-          streaks={streaks}
-          opponentData={opponentStats}
-          highlightKeys={overUnderMatchKeys}
-          highlightActive={overUnderHighlight}
-        />
-        <CardOverUnderHomeAway
-          fixtures={fixtures ?? []}
-          opponentFixtures={opponentFixtures}
-          showOpponentComparison={showOpponentComparison}
-          highlightKeys={overUnderMatchKeys}
-          highlightActive={overUnderHighlight}
-        />
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Over / Under")} />
+          <CardOverUnder
+            data={stats}
+            streaks={streaks}
+            opponentData={opponentStats}
+            highlightKeys={overUnderMatchKeys}
+            highlightActive={overUnderHighlight}
+          />
+        </div>
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Over / Under (Home/Away)")} />
+          <CardOverUnderHomeAway
+            fixtures={fixtures ?? []}
+            opponentFixtures={opponentFixtures}
+            showOpponentComparison={showOpponentComparison}
+            highlightKeys={overUnderMatchKeys}
+            highlightActive={overUnderHighlight}
+          />
+        </div>
       </div>
 
       <GoalsTotalTrendSection
@@ -223,10 +298,14 @@ export default function ProbabilitiesView({
         opponentName={nextOpponentName ?? "Adversaire"}
         referenceCount={fixtures?.length ?? 0}
         mode={filter}
+        onAiPrompt={handleAiPrompt}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <CardGoals data={stats} streaks={streaks} opponentData={opponentStats} />
+        <div className="space-y-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Buts")} />
+          <CardGoals data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
         <div className="hidden">
           <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
         </div>

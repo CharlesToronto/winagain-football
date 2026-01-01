@@ -9,6 +9,7 @@ export type TeamAdapterResult = {
   fixtures: any[];
   stats: any;
   nextMatch: any;
+  standings: any[];
 };
 
 export async function loadTeamData(teamIdRaw: string, range: RangeFilter): Promise<TeamAdapterResult> {
@@ -31,7 +32,7 @@ export async function loadTeamData(teamIdRaw: string, range: RangeFilter): Promi
   }
 
   // Fetch standings after setting league
-  let standings = null;
+  let standings: any[] = [];
 
   if (apiTeam?.league?.id) {
     const season = apiTeam?.league?.season ?? 2025;
@@ -141,5 +142,6 @@ export async function loadTeamData(teamIdRaw: string, range: RangeFilter): Promi
     fixtures,
     stats,
     nextMatch,
+    standings,
   };
 }

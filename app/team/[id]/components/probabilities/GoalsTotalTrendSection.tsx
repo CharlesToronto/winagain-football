@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import GoalsTrendCard, { getGoalsForMode, type Mode } from "./GoalsTrendCard";
+import AiPromptButton from "./AiPromptButton";
 
 type Fixture = any;
 
@@ -93,7 +94,7 @@ function NextMatchBelowTotalCard({
     : `Aucun match au-dessus de ${thresholdLabel}`;
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4">
+    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4 h-full">
       <div>
         <h3 className="font-semibold">Match suivant sous {thresholdLabel}</h3>
         <p className="text-xs text-white/70">
@@ -164,15 +165,18 @@ export default function GoalsTotalTrendSection({
   opponentName = "Adversaire",
   referenceCount = 0,
   mode = "FT",
+  onAiPrompt,
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
   opponentName?: string;
   referenceCount?: number;
   mode?: Mode;
+  onAiPrompt?: (cardTitle: string, detail?: string) => void;
 }) {
   const [threshold, setThreshold] = useState(3.5);
   const entries = useMemo(() => buildEntries(fixtures ?? [], mode), [fixtures, mode]);
+  const thresholdLabel = `+${formatNumber(threshold)}`;
 
   return (
     <div className="space-y-2">
@@ -181,19 +185,43 @@ export default function GoalsTotalTrendSection({
         <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
       </div>
       <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible">
-        <div className="order-2 md:order-1 snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-1">
-          <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
+        <div className="order-2 md:order-1 snap-start shrink-0 w-full md:w-auto md:col-span-1">
+          <div className="space-y-2">
+            {onAiPrompt ? (
+              <AiPromptButton
+                onClick={() =>
+                  onAiPrompt(
+                    `Match suivant sous ${thresholdLabel}`,
+                    `Total buts | Seuil ${thresholdLabel}`
+                  )
+                }
+              />
+            ) : null}
+            <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
+          </div>
         </div>
-        <div className="order-1 md:order-2 snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-2">
-          <GoalsTrendCard
-            fixtures={fixtures ?? []}
-            opponentFixtures={opponentFixtures}
-            opponentName={opponentName}
-            referenceCount={referenceCount}
-            mode={mode}
-            threshold={threshold}
-            onThresholdChange={setThreshold}
-          />
+        <div className="order-1 md:order-2 snap-start shrink-0 w-full md:w-auto md:col-span-2">
+          <div className="space-y-2">
+            {onAiPrompt ? (
+              <AiPromptButton
+                onClick={() =>
+                  onAiPrompt(
+                    "Tendance buts (total par match)",
+                    `Total buts | Seuil ${thresholdLabel}`
+                  )
+                }
+              />
+            ) : null}
+            <GoalsTrendCard
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              opponentName={opponentName}
+              referenceCount={referenceCount}
+              mode={mode}
+              threshold={threshold}
+              onThresholdChange={setThreshold}
+            />
+          </div>
         </div>
       </div>
     </div>

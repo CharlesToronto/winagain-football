@@ -7,6 +7,7 @@ import GoalsScoredTrendCard, {
   type Mode,
   type SeriesEntry,
 } from "./GoalsScoredTrendCard";
+import AiPromptButton from "./AiPromptButton";
 
 type Fixture = any;
 
@@ -85,7 +86,7 @@ function NextMatchBelowCard({
     : `Aucun match au-dessus de ${thresholdLabel}`;
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4">
+    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4 h-full">
       <div>
         <h3 className="font-semibold">Match suivant sous {thresholdLabel}</h3>
         <p className="text-xs text-white/70">
@@ -136,12 +137,14 @@ export default function GoalsScoredTrendSection({
   opponentName = "Adversaire",
   referenceCount = 0,
   mode = "FT",
+  onAiPrompt,
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
   opponentName?: string;
   referenceCount?: number;
   mode?: Mode;
+  onAiPrompt?: (cardTitle: string, detail?: string) => void;
 }) {
   const [location, setLocation] = useState<Location>("all");
   const [threshold, setThreshold] = useState(1.5);
@@ -152,6 +155,10 @@ export default function GoalsScoredTrendSection({
   );
   const teamName = useMemo(() => resolveTeamName(fixtures ?? []), [fixtures]);
 
+  const thresholdLabel = `+${formatNumber(threshold)}`;
+  const locationLabel =
+    location === "all" ? "General" : location === "home" ? "Home" : "Away";
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-center gap-2 md:hidden" aria-hidden="true">
@@ -159,22 +166,46 @@ export default function GoalsScoredTrendSection({
         <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
       </div>
       <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible">
-        <div className="snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-2">
-          <GoalsScoredTrendCard
-            fixtures={fixtures ?? []}
-            opponentFixtures={opponentFixtures}
-            opponentName={opponentName}
-            referenceCount={referenceCount}
-            mode={mode}
-            teamName={teamName}
-            threshold={threshold}
-            onThresholdChange={setThreshold}
-            location={location}
-            onLocationChange={setLocation}
-          />
+        <div className="snap-start shrink-0 w-full md:w-auto md:col-span-2">
+          <div className="space-y-2">
+            {onAiPrompt ? (
+              <AiPromptButton
+                onClick={() =>
+                  onAiPrompt(
+                    "Tendance buts (marques)",
+                    `Buts marques | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                  )
+                }
+              />
+            ) : null}
+            <GoalsScoredTrendCard
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              opponentName={opponentName}
+              referenceCount={referenceCount}
+              mode={mode}
+              teamName={teamName}
+              threshold={threshold}
+              onThresholdChange={setThreshold}
+              location={location}
+              onLocationChange={setLocation}
+            />
+          </div>
         </div>
-        <div className="snap-start shrink-0 w-[85vw] sm:w-[70vw] md:w-auto md:col-span-1">
-          <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />
+        <div className="snap-start shrink-0 w-full md:w-auto md:col-span-1">
+          <div className="space-y-2">
+            {onAiPrompt ? (
+              <AiPromptButton
+                onClick={() =>
+                  onAiPrompt(
+                    `Match suivant sous ${thresholdLabel}`,
+                    `Buts marques | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                  )
+                }
+              />
+            ) : null}
+            <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />
+          </div>
         </div>
       </div>
     </div>
