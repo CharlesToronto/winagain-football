@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { getProbabilityEngines } from "@/lib/adapters/probabilities";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
+import CharlyLottie from "./CharlyLottie";
 
 type FilterKey = "FT" | "HT" | "2H";
 
@@ -725,11 +726,14 @@ export default function TeamAiAnalysis({
     <div className="max-w-5xl">
       <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-white space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Analyse IA</h2>
-            <p className="text-xs text-white/70">
-              Basee sur les calculs Probabilites (filtre: {filter}).
-            </p>
+          <div className="flex items-center gap-3">
+            <CharlyLottie className="w-12 h-12 shrink-0" />
+            <div>
+              <h2 className="text-lg font-semibold">Analyse IA</h2>
+              <p className="text-xs text-white/70">
+                Basee sur les calculs Probabilites (filtre: {filter}).
+              </p>
+            </div>
           </div>
           <button
             type="button"
