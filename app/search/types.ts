@@ -12,7 +12,11 @@ export type MarketType =
   | "UNDER_5_5"
   | "DC_1X"
   | "DC_X2"
-  | "DC_12";
+  | "DC_12"
+  | "RESULT_1"
+  | "RESULT_X"
+  | "RESULT_2"
+  | "CLEAN_SHEET";
 
 export type FactType = "none" | "OVER_UNDER" | "RESULT" | "CLEAN_SHEET";
 export type OverUnderDirection = "OVER" | "UNDER";

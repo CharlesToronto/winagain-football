@@ -7,6 +7,7 @@ import type { MarketType, SearchFilters } from "@/app/search/types";
 type Filters = Partial<SearchFilters>;
 
 const CURRENT_SEASON = 2025;
+const TEAM_CHUNK_SIZE = 500;
 
 type NextMatchBelowSummary = {
   lastValue: number | null;
@@ -15,6 +16,15 @@ type NextMatchBelowSummary = {
   belowNext: number;
   percent: number;
 };
+
+function chunkArray<T>(items: T[], size: number) {
+  if (!items.length || size <= 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
 
 function pickProb(
   market: MarketType,
@@ -55,9 +65,45 @@ function pickProb(
       return { green: safe(stats?.dc_x2), blue: safeBlue(streaks?.dc_x2) };
     case "DC_12":
       return { green: safe(stats?.dc_12), blue: safeBlue(streaks?.dc_12) };
+    case "RESULT_1":
+      return { green: safe(stats?.win), blue: safeBlue(streaks?.win) };
+    case "RESULT_X":
+      return { green: safe(stats?.draw), blue: safeBlue(streaks?.draw) };
+    case "RESULT_2":
+      return { green: safe(stats?.lose), blue: safeBlue(streaks?.lose) };
+    case "CLEAN_SHEET":
+      return { green: safe(stats?.clean_home), blue: safeBlue(streaks?.clean_home) };
     default:
       return null;
   }
+}
+
+function lineToMarketKey(line: number) {
+  return String(line).replace(".", "_");
+}
+
+function resolveMarket(filters: SearchFilters): MarketType {
+  if (filters.factType === "OVER_UNDER") {
+    const direction = filters.overUnderDirection === "UNDER" ? "UNDER" : "OVER";
+    const line = typeof filters.overUnderLine === "number" ? filters.overUnderLine : 2.5;
+    return `${direction}_${lineToMarketKey(line)}` as MarketType;
+  }
+
+  if (filters.factType === "RESULT") {
+    const resultType = filters.resultType ?? "1X";
+    if (resultType === "1") return "RESULT_1";
+    if (resultType === "X") return "RESULT_X";
+    if (resultType === "2") return "RESULT_2";
+    if (resultType === "X2") return "DC_X2";
+    if (resultType === "12") return "DC_12";
+    return "DC_1X";
+  }
+
+  if (filters.factType === "CLEAN_SHEET") {
+    return "CLEAN_SHEET";
+  }
+
+  return "OVER_2_5";
 }
 
 function getOutcome(f: any, teamId: number): "W" | "D" | "L" | null {
@@ -271,9 +317,20 @@ export async function POST(req: Request) {
 
   // 2) Charger les teams + leagues
   const teamIds = Array.from(fixturesByTeam.keys());
-  const { data: teamsData } = await supabase
-    .from("teams")
-    .select("id,name,logo,competition_id");
+  const teamChunks = chunkArray(teamIds, TEAM_CHUNK_SIZE);
+  const teamsData: any[] = [];
+  for (const chunk of teamChunks) {
+    const { data, error } = await supabase
+      .from("teams")
+      .select("id,name,logo,competition_id")
+      .in("id", chunk);
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+    if (data?.length) {
+      teamsData.push(...data);
+    }
+  }
 
   const { data: compsData } = await supabase
     .from("competitions")
@@ -319,7 +376,7 @@ export async function POST(req: Request) {
     const stats = computeFT(mapped);
     const streaks = computeStreaks(mapped);
 
-    const market: MarketType = "OVER_2_5";
+    const market: MarketType = resolveMarket(filters);
     const prob = pickProb(market, stats, streaks);
     if (!prob) continue;
     const green = prob.green ?? 0;

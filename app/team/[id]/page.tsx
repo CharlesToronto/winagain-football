@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
+import { enUS } from "date-fns/locale";
 import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
 import TeamAiAnalysis from "./components/TeamAiAnalysis";
 import OddsConverter from "@/app/home/components/OddsConverter";
@@ -32,6 +33,17 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const asOfParam = searchParams.get("asOf");
+  const asOfDate = useMemo(() => {
+    if (!asOfParam) return null;
+    const parsed = new Date(asOfParam);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+  }, [asOfParam]);
+  const cutoffDate = useMemo(() => {
+    if (!asOfDate) return null;
+    return new Date(asOfDate.getTime() - 24 * 60 * 60 * 1000);
+  }, [asOfDate]);
 
   const [tab, setTab] = useState<"dashboard" | "stats" | "odds">("dashboard");
   const [probabilityFilter, setProbabilityFilter] = useState<"FT" | "HT" | "2H">("FT");
@@ -47,11 +59,57 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [favorites, setFavorites] = useState<FavoriteTeam[]>([]);
   const [opponentFixtures, setOpponentFixtures] = useState<FixtureItem[]>([]);
   const [overUnderHighlight, setOverUnderHighlight] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarFixtures, setCalendarFixtures] = useState<FixtureItem[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const copyTimeoutRef = useRef<number | null>(null);
   const tabParam = searchParams.get("tab");
   const teamId = Number(team?.id);
-  const nextOpponentId = getNextOpponentId(nextMatch, teamId);
-  const nextOpponentName = getNextOpponentName(nextMatch, teamId);
+  const effectiveRange = cutoffDate ? 30 : range;
+  const selectedMatch = useMemo(() => {
+    if (!asOfParam) return null;
+    return calendarFixtures.find((fixture) => fixture.date_utc === asOfParam) ?? null;
+  }, [calendarFixtures, asOfParam]);
+  const timeTravelNextMatch = useMemo(() => {
+    if (!selectedMatch) return null;
+    return {
+      fixture: {
+        date: selectedMatch.date_utc ?? null,
+        status: {
+          short:
+            selectedMatch.goals_home != null && selectedMatch.goals_away != null
+              ? "FT"
+              : "NS",
+        },
+        id: selectedMatch.id ?? null,
+        venue: { name: null },
+      },
+      goals: {
+        home: selectedMatch.goals_home ?? null,
+        away: selectedMatch.goals_away ?? null,
+      },
+      league: {
+        name: league?.name ?? "Inconnu",
+        round: null,
+      },
+      teams: {
+        home: {
+          id: selectedMatch.home_team_id ?? null,
+          name: selectedMatch.teams?.name ?? selectedMatch.home_team_name ?? "Home",
+          logo: selectedMatch.teams?.logo ?? selectedMatch.home_team_logo ?? null,
+        },
+        away: {
+          id: selectedMatch.away_team_id ?? null,
+          name: selectedMatch.opp?.name ?? selectedMatch.away_team_name ?? "Away",
+          logo: selectedMatch.opp?.logo ?? selectedMatch.away_team_logo ?? null,
+        },
+      },
+    };
+  }, [selectedMatch, league?.name]);
+  const effectiveNextMatch = timeTravelNextMatch ?? nextMatch;
+  const nextOpponentId = getNextOpponentId(effectiveNextMatch, teamId);
+  const nextOpponentName = getNextOpponentName(effectiveNextMatch, teamId);
 
   useEffect(() => {
     try {
@@ -83,6 +141,12 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   }, [favorites]);
 
   useEffect(() => {
+    if (asOfDate && range !== 30) {
+      setRange(30);
+    }
+  }, [asOfDate, range]);
+
+  useEffect(() => {
     if (tabParam === "stats") {
       setTab("stats");
     } else if (tabParam === "dashboard") {
@@ -97,7 +161,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function load() {
       try {
-        const result: TeamAdapterResult = await loadTeamData(id, range);
+        const result: TeamAdapterResult = await loadTeamData(id, effectiveRange, cutoffDate);
         setTeam(result.team);
         setLeague(result.league);
         setFixtures(result.fixtures);
@@ -113,7 +177,31 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     }
 
     load();
-  }, [id, range]);
+  }, [id, effectiveRange, cutoffDate]);
+
+  useEffect(() => {
+    if (!Number.isFinite(teamId)) return;
+    let active = true;
+    setCalendarLoading(true);
+    setCalendarError(null);
+    getTeamFixturesAllSeasons(teamId)
+      .then((data) => {
+        if (!active) return;
+        setCalendarFixtures(Array.isArray(data) ? data : []);
+      })
+      .catch((error: any) => {
+        if (!active) return;
+        setCalendarFixtures([]);
+        setCalendarError(error?.message ?? "Erreur chargement matchs.");
+      })
+      .finally(() => {
+        if (!active) return;
+        setCalendarLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [teamId]);
 
   useEffect(() => {
     async function loadOpponentFixtures() {
@@ -127,7 +215,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           setOpponentFixtures([]);
           return;
         }
-        const filtered = selectFixturesForRange(raw, range);
+        const filtered = selectFixturesForRange(raw, effectiveRange, cutoffDate);
         const mapped = filtered.map((fixture: any) => ({
           ...fixture,
           isHome: fixture.home_team_id === Number(nextOpponentId),
@@ -139,7 +227,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     }
 
     loadOpponentFixtures();
-  }, [nextOpponentId, range]);
+  }, [nextOpponentId, effectiveRange, cutoffDate]);
 
   const teamStats = useMemo(
     () => (fixtures?.length ? computeFT(fixtures) : null),
@@ -177,8 +265,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     }
   }, [overUnderMatchActive]);
 
-  if (loading) return <p className="p-6 text-white">Chargement...</p>;
-  if (!team) return <p className="p-6 text-white">Aucune donnée trouvée.</p>;
 
   const isFavorite = favorites.some((fav) => fav.id === teamId);
   const toggleFavorite = () => {
@@ -234,9 +320,46 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
   const handleCopyDoubleClick = () => {
     clearCopyTimeout();
-    const matchLabel = getNextMatchLabel(nextMatch, team?.name ?? "");
+    const matchLabel = getNextMatchLabel(effectiveNextMatch, team?.name ?? "");
     copyToClipboard(matchLabel);
   };
+
+  const updateQueryParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value == null || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const handleResetDate = () => {
+    updateQueryParams({ asOf: null });
+  };
+
+  const handleSelectMatch = (fixture: FixtureItem) => {
+    if (!fixture?.date_utc) return;
+    updateQueryParams({ asOf: fixture.date_utc });
+    setRange(30);
+    setCalendarOpen(false);
+  };
+
+  const calendarList = useMemo(() => {
+    const items = [...calendarFixtures];
+    items.sort((a, b) => getFixtureTimestamp(b) - getFixtureTimestamp(a));
+    return items;
+  }, [calendarFixtures]);
+
+  const bannerLabel = asOfDate
+    ? format(asOfDate, "dd MMM yyyy", { locale: enUS })
+    : null;
+
+  if (loading) return <p className="p-6 text-white">Chargement...</p>;
+  if (!team) return <p className="p-6 text-white">Aucune donnAce trouvAce.</p>;
 
   return (
     <div className="min-h-screen w-full p-6 text-white relative">
@@ -266,6 +389,29 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             />
           </svg>
         </div>
+        <button
+          type="button"
+          onClick={() => setCalendarOpen(true)}
+          aria-label="Calendrier des matchs"
+          title="Calendrier des matchs"
+          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
+            asOfDate
+              ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+              : "text-white/90 hover:bg-white/20"
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            aria-hidden
+          >
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M8 3v4M16 3v4M3 9h18" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -356,6 +502,98 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           </svg>
         </button>
       </div>
+      {bannerLabel ? (
+        <button
+          type="button"
+          onClick={handleResetDate}
+          className="mb-4 w-full rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm text-white/90 hover:bg-white/20 transition"
+        >
+          Stats du {bannerLabel} · Revenir a aujourd'hui
+        </button>
+      ) : null}
+      {calendarOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/70"
+            aria-label="Fermer calendrier"
+            onClick={() => setCalendarOpen(false)}
+          />
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div className="text-sm font-semibold text-white">Calendrier des matchs</div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleResetDate();
+                    setCalendarOpen(false);
+                  }}
+                  className="rounded-md bg-white/10 px-3 py-1 text-xs text-white/80 hover:bg-white/20"
+                >
+                  Date actuelle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalendarOpen(false)}
+                  className="rounded-md bg-white/10 px-3 py-1 text-xs text-white/80 hover:bg-white/20"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto px-4 py-3">
+              {calendarLoading ? (
+                <div className="text-sm text-white/70">Chargement des matchs...</div>
+              ) : calendarError ? (
+                <div className="text-sm text-red-300">{calendarError}</div>
+              ) : calendarList.length === 0 ? (
+                <div className="text-sm text-white/70">Aucun match disponible.</div>
+              ) : (
+                <div className="space-y-2">
+                  {calendarList.map((fixture) => {
+                    const dateRaw = fixture.date_utc ?? null;
+                    const dateLabel = dateRaw
+                      ? format(new Date(dateRaw), "dd MMM yyyy HH:mm", { locale: enUS })
+                      : "Date inconnue";
+                    const homeName =
+                      fixture.teams?.name ?? fixture.home_team_name ?? "Home";
+                    const awayName =
+                      fixture.opp?.name ?? fixture.away_team_name ?? "Away";
+                    const scoreLabel =
+                      fixture.goals_home != null && fixture.goals_away != null
+                        ? `${fixture.goals_home} - ${fixture.goals_away}`
+                        : "VS";
+                    const isSelected = asOfParam === fixture.date_utc;
+                    return (
+                      <button
+                        key={fixture.id ?? `${homeName}-${awayName}-${dateRaw}`}
+                        type="button"
+                        onClick={() => handleSelectMatch(fixture)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                          isSelected
+                            ? "border-emerald-400/40 bg-emerald-500/10 text-white"
+                            : "border-white/10 bg-black/20 text-white/80 hover:bg-white/10"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-semibold">
+                            {homeName} vs {awayName}
+                          </span>
+                          <span className="text-xs text-white/60">{dateLabel}</span>
+                        </div>
+                        <div className="mt-1 text-xs text-white/70">
+                          Score: {scoreLabel}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm opacity-80">
         <Link href="/leagues" className="hover:underline">Leagues</Link>
         <span>/</span>
@@ -453,7 +691,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           league={league}
           fixtures={fixtures}
           team={team}
-          nextMatch={nextMatch}
+          nextMatch={effectiveNextMatch}
           standings={standings}
           opponentFixtures={opponentFixtures}
           filter={probabilityFilter}
@@ -465,7 +703,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         <ProbabilitiesView
           fixtures={fixtures}
           teamId={teamId}
-          range={range}
+          range={effectiveRange}
+          cutoffDate={cutoffDate}
           nextOpponentId={nextOpponentId}
           nextOpponentName={nextOpponentName}
           overUnderMatchKeys={overUnderMatchKeys}
@@ -490,13 +729,25 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   );
 }
 
-function selectFixturesForRange(fixtures: FixtureItem[] = [], range?: RangeOption) {
+function selectFixturesForRange(
+  fixtures: FixtureItem[] = [],
+  range?: RangeOption,
+  cutoffDate?: Date | null
+) {
   let played = fixtures.filter(
     (fixture) => fixture.goals_home !== null && fixture.goals_away !== null
   );
 
   if (range === "season") {
     played = played.filter((fixture) => fixture.season === CURRENT_SEASON);
+  }
+
+  if (cutoffDate) {
+    const cutoffTime = cutoffDate.getTime();
+    played = played.filter((fixture) => {
+      const time = getFixtureTimestamp(fixture);
+      return time > 0 && time <= cutoffTime;
+    });
   }
 
   played.sort(

@@ -21,7 +21,7 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
       <div className="text-sm text-white/80">
         <div>Dernier match : {new Date(team.lastMatchDate).toLocaleString("fr-FR")}</div>
         <div>Adversaire : {team.opponent}</div>
-        <div>Marche : {formatMarket(team.market)}</div>
+        <div>Marchés : {formatMarket(team.market)}</div>
         {team.nextMatchBelow?.line != null && team.nextMatchBelow?.percent != null ? (
           <div>
             Match suivant sous +{formatNumber(team.nextMatchBelow.line)} :{" "}
@@ -85,6 +85,14 @@ function formatMarket(m: string) {
       return "Double chance X2";
     case "DC_12":
       return "Double chance 12";
+    case "RESULT_1":
+      return "1 (Victoire)";
+    case "RESULT_X":
+      return "X (Nul)";
+    case "RESULT_2":
+      return "2 (Défaite)";
+    case "CLEAN_SHEET":
+      return "Clean sheet";
     default:
       return m;
   }

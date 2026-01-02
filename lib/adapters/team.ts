@@ -12,7 +12,11 @@ export type TeamAdapterResult = {
   standings: any[];
 };
 
-export async function loadTeamData(teamIdRaw: string, range: RangeFilter): Promise<TeamAdapterResult> {
+export async function loadTeamData(
+  teamIdRaw: string,
+  range: RangeFilter,
+  cutoffDate?: Date | null
+): Promise<TeamAdapterResult> {
   const id = Number(teamIdRaw);
 
   const teamData = await fetchApi("teams", { id: teamIdRaw });
@@ -55,6 +59,17 @@ export async function loadTeamData(teamIdRaw: string, range: RangeFilter): Promi
 
     if (range === "season") {
       played = played.filter((f: any) => f.season === 2025);
+    }
+
+    if (cutoffDate) {
+      const cutoffTime = cutoffDate.getTime();
+      played = played.filter((f: any) => {
+        const raw =
+          f.date_utc ?? f.date ?? f.fixture?.date ?? f.timestamp ?? null;
+        if (!raw) return false;
+        const time = new Date(raw).getTime();
+        return Number.isFinite(time) && time <= cutoffTime;
+      });
     }
 
     played.sort(

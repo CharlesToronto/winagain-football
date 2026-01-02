@@ -25,11 +25,25 @@ type RangeOption = number | "season";
 
 const CURRENT_SEASON = 2025;
 
-function selectOpponentFixtures(fixtures: Fixture[], range?: RangeOption) {
+function selectOpponentFixtures(
+  fixtures: Fixture[],
+  range?: RangeOption,
+  cutoffDate?: Date | null
+) {
   let played = fixtures.filter((f) => f.goals_home !== null && f.goals_away !== null);
 
   if (range === "season") {
     played = played.filter((f) => f.season === CURRENT_SEASON);
+  }
+
+  if (cutoffDate) {
+    const cutoffTime = cutoffDate.getTime();
+    played = played.filter((f) => {
+      const raw = f.date_utc ?? f.date ?? f.timestamp ?? null;
+      if (!raw) return false;
+      const time = new Date(raw).getTime();
+      return Number.isFinite(time) && time <= cutoffTime;
+    });
   }
 
   played.sort(
@@ -47,6 +61,7 @@ export default function ProbabilitiesView({
   nextOpponentId,
   nextOpponentName,
   range,
+  cutoffDate,
   overUnderMatchKeys,
   overUnderHighlight,
   filter,
@@ -57,6 +72,7 @@ export default function ProbabilitiesView({
   nextOpponentId?: number | null;
   nextOpponentName?: string | null;
   range?: RangeOption;
+  cutoffDate?: Date | null;
   overUnderMatchKeys?: Set<string>;
   overUnderHighlight?: boolean;
   filter: FilterKey;
@@ -102,7 +118,7 @@ export default function ProbabilitiesView({
           setOpponentFixtures([]);
           return;
         }
-        const filtered = selectOpponentFixtures(raw, range);
+        const filtered = selectOpponentFixtures(raw, range, cutoffDate);
         if (!filtered || filtered.length === 0) {
           setOpponentFixtures([]);
           return;
@@ -125,7 +141,7 @@ export default function ProbabilitiesView({
       }
     }
     loadOpponent();
-  }, [nextOpponentId, range]);
+  }, [nextOpponentId, range, cutoffDate]);
 
   useEffect(() => {
     setShowOpponentComparison(false);
