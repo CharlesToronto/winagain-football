@@ -94,6 +94,8 @@ export default function ProbabilitiesView({
     streaks: streakStats,
   };
   const streaks = streakStats;
+  const calendarActive = Boolean(cutoffDate);
+  const cardBorderClass = calendarActive ? "rounded-xl ring-1 ring-red-500/70" : "";
   const opponentStats =
     showOpponentComparison && opponentFixtures.length > 0
       ? computeEngine(opponentFixtures ?? [])
@@ -227,51 +229,63 @@ export default function ProbabilitiesView({
             <div className="snap-start shrink-0 w-full">
               <div className="space-y-2">
                 <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
-                <CardResultSimple
-                  data={stats}
-                  streaks={streaks}
-                  opponentData={opponentStats}
-                />
+                <div className={cardBorderClass}>
+                  <CardResultSimple
+                    data={stats}
+                    streaks={streaks}
+                    opponentData={opponentStats}
+                  />
+                </div>
               </div>
             </div>
             <div className="snap-start shrink-0 w-full">
               <div className="space-y-2">
                 <AiPromptButton onClick={() => handleAiPrompt("Double chance")} />
-                <CardDoubleChance
-                  data={stats}
-                  streaks={streaks}
-                  opponentData={opponentStats}
-                  highlightKeys={overUnderMatchKeys}
-                  highlightActive={overUnderHighlight}
-                />
+                <div className={cardBorderClass}>
+                  <CardDoubleChance
+                    data={stats}
+                    streaks={streaks}
+                    opponentData={opponentStats}
+                    highlightKeys={overUnderMatchKeys}
+                    highlightActive={overUnderHighlight}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Buts Marqués / Encaissés")} />
-          <CardGoalsSplit fixtures={fixtures ?? []} />
+          <div className={cardBorderClass}>
+            <CardGoalsSplit fixtures={fixtures ?? []} />
+          </div>
         </div>
       </div>
 
       <div className="hidden md:grid md:grid-cols-3 gap-6">
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
-          <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
+          <div className={cardBorderClass}>
+            <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
+          </div>
         </div>
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Buts Marqués / Encaissés")} />
-          <CardGoalsSplit fixtures={fixtures ?? []} />
+          <div className={cardBorderClass}>
+            <CardGoalsSplit fixtures={fixtures ?? []} />
+          </div>
         </div>
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Double chance")} />
-          <CardDoubleChance
-            data={stats}
-            streaks={streaks}
-            opponentData={opponentStats}
-            highlightKeys={overUnderMatchKeys}
-            highlightActive={overUnderHighlight}
-          />
+          <div className={cardBorderClass}>
+            <CardDoubleChance
+              data={stats}
+              streaks={streaks}
+              opponentData={opponentStats}
+              highlightKeys={overUnderMatchKeys}
+              highlightActive={overUnderHighlight}
+            />
+          </div>
         </div>
       </div>
 
@@ -282,28 +296,33 @@ export default function ProbabilitiesView({
         referenceCount={fixtures?.length ?? 0}
         mode={filter}
         onAiPrompt={handleAiPrompt}
+        cardBorderClass={cardBorderClass}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Over / Under")} />
-          <CardOverUnder
-            data={stats}
-            streaks={streaks}
-            opponentData={opponentStats}
-            highlightKeys={overUnderMatchKeys}
-            highlightActive={overUnderHighlight}
-          />
+          <div className={cardBorderClass}>
+            <CardOverUnder
+              data={stats}
+              streaks={streaks}
+              opponentData={opponentStats}
+              highlightKeys={overUnderMatchKeys}
+              highlightActive={overUnderHighlight}
+            />
+          </div>
         </div>
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Over / Under (Home/Away)")} />
-          <CardOverUnderHomeAway
-            fixtures={fixtures ?? []}
-            opponentFixtures={opponentFixtures}
-            showOpponentComparison={showOpponentComparison}
-            highlightKeys={overUnderMatchKeys}
-            highlightActive={overUnderHighlight}
-          />
+          <div className={cardBorderClass}>
+            <CardOverUnderHomeAway
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              showOpponentComparison={showOpponentComparison}
+              highlightKeys={overUnderMatchKeys}
+              highlightActive={overUnderHighlight}
+            />
+          </div>
         </div>
       </div>
 
@@ -314,21 +333,30 @@ export default function ProbabilitiesView({
         referenceCount={fixtures?.length ?? 0}
         mode={filter}
         onAiPrompt={handleAiPrompt}
+        cardBorderClass={cardBorderClass}
       />
 
       <div className="hidden">
-        <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
+        <div className={cardBorderClass}>
+          <CardCorners data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
       </div>
       <div className="hidden">
-        <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
+        <div className={cardBorderClass}>
+          <CardCards data={stats} streaks={streaks} opponentData={opponentStats} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <div className="hidden">
-          <CardSeries data={stats} streaks={streaks} opponentData={opponentStats} />
+          <div className={cardBorderClass}>
+            <CardSeries data={stats} streaks={streaks} opponentData={opponentStats} />
+          </div>
         </div>
         <div className="hidden">
-          <CardHalfFull data={stats} streaks={streaks} opponentData={opponentStats} />
+          <div className={cardBorderClass}>
+            <CardHalfFull data={stats} streaks={streaks} opponentData={opponentStats} />
+          </div>
         </div>
       </div>
 

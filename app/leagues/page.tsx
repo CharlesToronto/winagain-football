@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card from "@/app/components/ui/Card";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { COMPETITION_IDS_BY_COUNTRY, ALL_COMPETITION_IDS } from "@/app/lib/data/competitionIds";
+import { COMPETITION_IDS_BY_COUNTRY } from "@/app/lib/data/competitionIds";
 
 // TOP 5 major leagues
 const TOP_LEAGUES = [
@@ -15,59 +15,129 @@ const TOP_LEAGUES = [
   { id: 61, name: "Ligue 1", country: "France", logo: "https://media.api-sports.io/football/leagues/61.png" },
 ];
 
-const leaguesData = COMPETITION_IDS_BY_COUNTRY.flatMap((group) =>
+const leaguesBase = COMPETITION_IDS_BY_COUNTRY.flatMap((group) =>
   group.ids.map((id) => ({
     id,
-    name: `League ${id}`,
     country: group.country
   }))
 );
 
 export default function LeaguesPage() {
   const [query, setQuery] = useState("");
+  const [countryFilter, setCountryFilter] = useState("all");
   const [expanded, setExpanded] = useState(false);
+  const [competitionIndex, setCompetitionIndex] = useState<Record<number, { name?: string }>>({});
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/competitions")
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load competitions");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active || !Array.isArray(data)) return;
+        const index: Record<number, { name?: string }> = {};
+        data.forEach((item) => {
+          if (!item || typeof item.id !== "number") return;
+          index[item.id] = { name: item.name ?? undefined };
+        });
+        setCompetitionIndex(index);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCompetitionIndex({});
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const leaguesData = useMemo(() => {
+    return leaguesBase.map((league) => ({
+      ...league,
+      name: competitionIndex[league.id]?.name ?? `League ${league.id}`,
+    }));
+  }, [competitionIndex]);
 
   // Filter all leagues by search
   const filteredLeagues = useMemo(() => {
-    if (!query) return leaguesData;
+    let filtered = leaguesData;
+    if (countryFilter !== "all") {
+      filtered = filtered.filter((l) => l.country === countryFilter);
+    }
+    if (!query) return filtered;
     const q = query.toLowerCase();
-    return leaguesData.filter(
+    return filtered.filter(
       (l) =>
         l.name.toLowerCase().includes(q) ||
         l.country.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [query, countryFilter, leaguesData]);
+
+  const countries = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    COMPETITION_IDS_BY_COUNTRY.forEach((group) => {
+      if (!seen.has(group.country)) {
+        seen.add(group.country);
+        list.push(group.country);
+      }
+    });
+    return list;
+  }, []);
 
   return (
     <div className="p-6 flex flex-col gap-10">
 
       {/* SEARCH BAR */}
-      <div className="relative w-full max-w-md">
-        <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Rechercher une ligue…"
-          className="w-full rounded-lg border px-10 py-2 focus:ring-2 focus:ring-blue-500 text-sm"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-3 h-5 w-5 text-white/70" />
+          <input
+            type="text"
+            placeholder="Rechercher une ligue..."
+            className="w-full rounded-lg border border-white/20 bg-white/10 px-10 py-2 text-sm text-white placeholder:text-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-400/60"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col">
+          <select
+            value={countryFilter}
+            onChange={(e) => setCountryFilter(e.target.value)}
+            className="w-56 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white shadow-sm backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+          >
+            <option value="all" className="bg-black/80 text-white">
+              Tous les pays
+            </option>
+            {countries.map((country) => (
+              <option key={country} value={country} className="bg-black/80 text-white">
+                {country}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* TOP 5 LEAGUES */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Top 5 Ligues Européennes</h2>
+        <h2 className="text-xl font-semibold mb-4">Top 5 Ligues Europeennes</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
           {TOP_LEAGUES.map((l) => (
-            <Card key={l.id} className="flex flex-col items-center gap-4 text-center">
+            <Card
+              key={l.id}
+              className="flex flex-col items-center gap-4 text-center bg-white/5 border-white/10 text-white backdrop-blur-sm"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={l.logo} className="h-16 w-16" alt={l.name} />
               <div>
                 <p className="text-lg font-semibold">{l.name}</p>
-                <p className="text-gray-500 text-sm">{l.country}</p>
+                <p className="text-white/70 text-sm">{l.country}</p>
               </div>
               <Link
                 href={`/league/${l.id}`}
-                className="text-blue-600 text-sm font-medium hover:underline"
+                className="text-sky-300 text-sm font-medium hover:underline"
               >
                 Voir la ligue →
               </Link>
@@ -88,7 +158,10 @@ export default function LeaguesPage() {
         {expanded && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredLeagues.map((l) => (
-              <Card key={l.id} className="flex items-center justify-between p-4">
+              <Card
+                key={l.id}
+                className="flex items-center justify-between p-4 bg-white/5 border-white/10 text-white backdrop-blur-sm"
+              >
                 <div className="flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -98,13 +171,13 @@ export default function LeaguesPage() {
                   />
                   <div>
                     <p className="text-sm font-semibold">{l.name}</p>
-                    <p className="text-xs text-gray-500">{l.country}</p>
+                    <p className="text-xs text-white/70">{l.country}</p>
                   </div>
                 </div>
 
                 <Link
                   href={`/league/${l.id}`}
-                  className="text-blue-600 text-xs font-medium hover:underline"
+                  className="text-sky-300 text-xs font-medium hover:underline"
                 >
                   Voir →
                 </Link>

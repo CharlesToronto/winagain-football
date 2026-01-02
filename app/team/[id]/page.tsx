@@ -66,7 +66,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const copyTimeoutRef = useRef<number | null>(null);
   const tabParam = searchParams.get("tab");
   const teamId = Number(team?.id);
-  const effectiveRange = cutoffDate ? 30 : range;
+  const effectiveRange = range;
   const selectedMatch = useMemo(() => {
     if (!asOfParam) return null;
     return calendarFixtures.find((fixture) => fixture.date_utc === asOfParam) ?? null;
@@ -110,6 +110,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const effectiveNextMatch = timeTravelNextMatch ?? nextMatch;
   const nextOpponentId = getNextOpponentId(effectiveNextMatch, teamId);
   const nextOpponentName = getNextOpponentName(effectiveNextMatch, teamId);
+  const calendarActive = Boolean(asOfDate);
 
   useEffect(() => {
     try {
@@ -139,12 +140,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       // Ignore storage failures (private mode, blocked storage, etc.)
     }
   }, [favorites]);
-
-  useEffect(() => {
-    if (asOfDate && range !== 30) {
-      setRange(30);
-    }
-  }, [asOfDate, range]);
 
   useEffect(() => {
     if (tabParam === "stats") {
@@ -344,7 +339,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const handleSelectMatch = (fixture: FixtureItem) => {
     if (!fixture?.date_utc) return;
     updateQueryParams({ asOf: fixture.date_utc });
-    setRange(30);
     setCalendarOpen(false);
   };
 
@@ -391,29 +385,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </div>
         <button
           type="button"
-          onClick={() => setCalendarOpen(true)}
-          aria-label="Calendrier des matchs"
-          title="Calendrier des matchs"
-          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-            asOfDate
-              ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-              : "text-white/90 hover:bg-white/20"
-          }`}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
-          >
-            <rect x="3" y="5" width="18" height="16" rx="2" />
-            <path d="M8 3v4M16 3v4M3 9h18" />
-          </svg>
-        </button>
-        <button
-          type="button"
           onClick={() => {
             if (!overUnderMatchActive) return;
             setOverUnderHighlight((prev) => !prev);
@@ -446,7 +417,30 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             />
           </svg>
         </button>
-        <span className="h-6 w-px bg-white/30" aria-hidden />
+        <span className="h-6 w-[2px] bg-white/30" aria-hidden />
+        <button
+          type="button"
+          onClick={() => setCalendarOpen(true)}
+          aria-label="Calendrier des matchs"
+          title="Calendrier des matchs"
+          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
+            asOfDate
+              ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+              : "text-white/90 hover:bg-white/20"
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            aria-hidden
+          >
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M8 3v4M16 3v4M3 9h18" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={toggleFavorite}
@@ -506,7 +500,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         <button
           type="button"
           onClick={handleResetDate}
-          className="mb-4 w-full rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm text-white/90 hover:bg-white/20 transition"
+          className="mb-4 w-full rounded-lg border border-red-500/70 bg-red-600/70 px-4 py-2 text-sm text-white hover:bg-red-600/80 transition"
         >
           Stats du {bannerLabel} · Revenir a aujourd'hui
         </button>
@@ -564,7 +558,40 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                       fixture.goals_home != null && fixture.goals_away != null
                         ? `${fixture.goals_home} - ${fixture.goals_away}`
                         : "VS";
+                    const isFinal =
+                      fixture.goals_home != null && fixture.goals_away != null;
+                    const isNotStarted = !isFinal;
+                    const nsTextClass = isNotStarted ? "blur-[1px]" : "";
                     const isSelected = asOfParam === fixture.date_utc;
+                    const hasTeamId = Number.isFinite(teamId);
+                    const isTeamHome = hasTeamId && fixture.home_team_id === teamId;
+                    const isTeamAway = hasTeamId && fixture.away_team_id === teamId;
+                    const goalsFor = isFinal
+                      ? isTeamHome
+                        ? fixture.goals_home
+                        : isTeamAway
+                          ? fixture.goals_away
+                          : null
+                      : null;
+                    const goalsAgainst = isFinal
+                      ? isTeamHome
+                        ? fixture.goals_away
+                        : isTeamAway
+                          ? fixture.goals_home
+                          : null
+                      : null;
+                    const titleColorClass = isFinal && goalsFor != null && goalsAgainst != null
+                      ? goalsFor > goalsAgainst
+                        ? "text-green-400"
+                        : goalsFor < goalsAgainst
+                          ? "text-red-400"
+                          : "text-blue-400"
+                      : isNotStarted
+                        ? "text-white/60"
+                        : isSelected
+                          ? "text-white"
+                          : "text-white/80";
+                    const scoreClass = isNotStarted ? "text-xs text-white/60" : "text-xs text-white/70";
                     return (
                       <button
                         key={fixture.id ?? `${homeName}-${awayName}-${dateRaw}`}
@@ -577,12 +604,14 @@ export default function TeamPage({ params }: { params: { id: string } }) {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <span className="font-semibold">
+                          <span className={`font-semibold ${titleColorClass} ${nsTextClass}`}>
                             {homeName} vs {awayName}
                           </span>
-                          <span className="text-xs text-white/60">{dateLabel}</span>
+                          <span className={`text-xs text-white/60 ${nsTextClass}`}>
+                            {dateLabel}
+                          </span>
                         </div>
-                        <div className="mt-1 text-xs text-white/70">
+                        <div className={`mt-1 ${scoreClass} ${nsTextClass}`}>
                           Score: {scoreLabel}
                         </div>
                       </button>
@@ -698,6 +727,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           range={range}
           nextOpponentName={nextOpponentName}
           nextOpponentId={nextOpponentId}
+          calendarActive={calendarActive}
         />
       ) : tab === "stats" ? (
         <ProbabilitiesView
@@ -896,6 +926,7 @@ function DashboardView({
   range,
   nextOpponentName,
   nextOpponentId,
+  calendarActive,
 }: {
   stats: any;
   league: any;
@@ -908,6 +939,7 @@ function DashboardView({
   range: RangeOption;
   nextOpponentName: string | null;
   nextOpponentId: number | null;
+  calendarActive: boolean;
 }) {
   if (!stats) return <p className="opacity-60">Aucune statistique disponible.</p>;
 
@@ -1019,7 +1051,11 @@ function DashboardView({
           {!computedNextMatch ? (
             <p>Aucun prochain match.</p>
           ) : (
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3">
+            <div
+              className={`p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3 ${
+                calendarActive ? "ring-1 ring-red-500/70" : ""
+              }`}
+            >
 
               {/* Date + Heure + Journée */}
               <div className="text-sm text-gray-300">

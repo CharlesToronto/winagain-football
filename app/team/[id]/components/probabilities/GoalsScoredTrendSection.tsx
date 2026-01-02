@@ -138,6 +138,7 @@ export default function GoalsScoredTrendSection({
   referenceCount = 0,
   mode = "FT",
   onAiPrompt,
+  cardBorderClass = "",
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
@@ -145,6 +146,7 @@ export default function GoalsScoredTrendSection({
   referenceCount?: number;
   mode?: Mode;
   onAiPrompt?: (cardTitle: string, detail?: string) => void;
+  cardBorderClass?: string;
 }) {
   const [location, setLocation] = useState<Location>("all");
   const [threshold, setThreshold] = useState(1.5);
@@ -178,18 +180,20 @@ export default function GoalsScoredTrendSection({
                 }
               />
             ) : null}
-            <GoalsScoredTrendCard
-              fixtures={fixtures ?? []}
-              opponentFixtures={opponentFixtures}
-              opponentName={opponentName}
-              referenceCount={referenceCount}
-              mode={mode}
-              teamName={teamName}
-              threshold={threshold}
-              onThresholdChange={setThreshold}
-              location={location}
-              onLocationChange={setLocation}
-            />
+            <div className={cardBorderClass}>
+              <GoalsScoredTrendCard
+                fixtures={fixtures ?? []}
+                opponentFixtures={opponentFixtures}
+                opponentName={opponentName}
+                referenceCount={referenceCount}
+                mode={mode}
+                teamName={teamName}
+                threshold={threshold}
+                onThresholdChange={setThreshold}
+                location={location}
+                onLocationChange={setLocation}
+              />
+            </div>
           </div>
         </div>
         <div className="snap-start shrink-0 w-full md:w-auto md:col-span-1">
@@ -204,7 +208,9 @@ export default function GoalsScoredTrendSection({
                 }
               />
             ) : null}
-            <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />
+            <div className={cardBorderClass}>
+              <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />
+            </div>
           </div>
         </div>
       </div>

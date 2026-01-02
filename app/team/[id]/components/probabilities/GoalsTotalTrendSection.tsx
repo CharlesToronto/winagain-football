@@ -166,6 +166,7 @@ export default function GoalsTotalTrendSection({
   referenceCount = 0,
   mode = "FT",
   onAiPrompt,
+  cardBorderClass = "",
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
@@ -173,6 +174,7 @@ export default function GoalsTotalTrendSection({
   referenceCount?: number;
   mode?: Mode;
   onAiPrompt?: (cardTitle: string, detail?: string) => void;
+  cardBorderClass?: string;
 }) {
   const [threshold, setThreshold] = useState(3.5);
   const entries = useMemo(() => buildEntries(fixtures ?? [], mode), [fixtures, mode]);
@@ -197,7 +199,9 @@ export default function GoalsTotalTrendSection({
                 }
               />
             ) : null}
-            <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
+            <div className={cardBorderClass}>
+              <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
+            </div>
           </div>
         </div>
         <div className="order-1 md:order-2 snap-start shrink-0 w-full md:w-auto md:col-span-2">
@@ -212,15 +216,17 @@ export default function GoalsTotalTrendSection({
                 }
               />
             ) : null}
-            <GoalsTrendCard
-              fixtures={fixtures ?? []}
-              opponentFixtures={opponentFixtures}
-              opponentName={opponentName}
-              referenceCount={referenceCount}
-              mode={mode}
-              threshold={threshold}
-              onThresholdChange={setThreshold}
-            />
+            <div className={cardBorderClass}>
+              <GoalsTrendCard
+                fixtures={fixtures ?? []}
+                opponentFixtures={opponentFixtures}
+                opponentName={opponentName}
+                referenceCount={referenceCount}
+                mode={mode}
+                threshold={threshold}
+                onThresholdChange={setThreshold}
+              />
+            </div>
           </div>
         </div>
       </div>
