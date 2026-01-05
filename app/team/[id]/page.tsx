@@ -740,7 +740,18 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="flex flex-nowrap gap-3 mb-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 sm:flex-wrap sm:overflow-visible">
-        {[50, 40, 30, 20, 10].map((n) => (
+        <button
+          onClick={() => setRange("season")}
+          className={`px-2 py-1 text-sm rounded snap-start whitespace-nowrap ${
+            range === "season"
+              ? "bg-green-600 text-white"
+              : "bg-white/20 text-white hover:bg-white/30"
+          }`}
+        >
+          Saison 2025
+        </button>
+
+        {[10, 20, 30, 40, 50].map((n) => (
           <button
             key={n}
             onClick={() => setRange(n)}
@@ -753,17 +764,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             {n} matchs
           </button>
         ))}
-
-        <button
-          onClick={() => setRange("season")}
-          className={`px-2 py-1 text-sm rounded snap-start whitespace-nowrap ${
-            range === "season"
-              ? "bg-green-600 text-white"
-              : "bg-white/20 text-white hover:bg-white/30"
-          }`}
-        >
-          Saison 2025
-        </button>
       </div>
 
       <div className="flex flex-nowrap gap-4 mb-6 border-b pb-2 overflow-x-auto no-scrollbar snap-x snap-mandatory sm:flex-wrap sm:overflow-visible">
@@ -790,14 +790,14 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </button>
 
         <button
-          onClick={() => setTab("converter")}
+          onClick={() => setTab("league")}
           className={
-            tab === "converter"
+            tab === "league"
               ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
               : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
-          Convertisseur
+          League Stats
         </button>
 
         <button
@@ -809,17 +809,6 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           }
         >
           Odds
-        </button>
-
-        <button
-          onClick={() => setTab("league")}
-          className={
-            tab === "league"
-              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
-              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
-          }
-        >
-          Stats League
         </button>
       </div>
 

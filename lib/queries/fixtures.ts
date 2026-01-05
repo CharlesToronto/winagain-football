@@ -73,7 +73,9 @@ export async function getLeagueFixturesBySeason(
       goals_home,
       goals_away,
       goals_home_ht,
-      goals_away_ht
+      goals_away_ht,
+      teams:home_team_id ( id, name, logo ),
+      opp:away_team_id ( id, name, logo )
     `)
     .eq("competition_id", leagueId)
     .eq("status_short", "FT")

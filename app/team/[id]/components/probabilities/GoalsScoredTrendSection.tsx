@@ -41,10 +41,12 @@ function computeNextMatchBelow(
     };
   }
 
+  const triggerFloor = Math.max(0, threshold - 0.5);
   let triggers = 0;
   let belowNext = 0;
   for (let i = 0; i < entries.length - 1; i++) {
-    if (entries[i].value > threshold) {
+    const currentValue = entries[i].value;
+    if (currentValue >= triggerFloor) {
       triggers += 1;
       if (entries[i + 1].value < threshold) {
         belowNext += 1;
@@ -53,7 +55,7 @@ function computeNextMatchBelow(
   }
   const percent = triggers ? Math.round((belowNext / triggers) * 100) : 0;
   const lastValue = entries[entries.length - 1]?.value ?? null;
-  const lastAbove = lastValue !== null && lastValue > threshold;
+  const lastAbove = lastValue !== null && lastValue >= triggerFloor;
 
   return {
     lastValue,

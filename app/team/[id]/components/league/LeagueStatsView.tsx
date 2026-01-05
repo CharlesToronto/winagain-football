@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import CardDoubleChance from "../probabilities/CardDoubleChance";
 import CardOverUnder from "../probabilities/CardOverUnder";
 import LeagueUnderTrendCard from "./LeagueUnderTrendCard";
+import LeagueRoundFixturesCard from "./LeagueRoundFixturesCard";
 import computeLeagueFT from "@/lib/analysisEngine/computeLeagueFT";
 import { getLeagueFixturesBySeason } from "@/lib/queries/fixtures";
 
@@ -95,12 +96,25 @@ export default function LeagueStatsView({
 
   return (
     <div className="space-y-6">
-      <LeagueUnderTrendCard
-        fixtures={leagueFixtures}
-        threshold={underThreshold}
-        onThresholdChange={setUnderThreshold}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex items-center justify-center gap-2 md:hidden" aria-hidden="true">
+        <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+        <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+      </div>
+      <div className="md:hidden">
+        <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory">
+          <div className="snap-start shrink-0 w-full">
+            <div className={cardBorderClass}>
+              <CardOverUnder data={stats} streaks={null} />
+            </div>
+          </div>
+          <div className="snap-start shrink-0 w-full">
+            <div className={cardBorderClass}>
+              <CardDoubleChance data={stats} streaks={null} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <div className={cardBorderClass}>
             <CardOverUnder data={stats} streaks={null} />
@@ -112,6 +126,16 @@ export default function LeagueStatsView({
           </div>
         </div>
       </div>
+
+      <LeagueUnderTrendCard
+        fixtures={leagueFixtures}
+        threshold={underThreshold}
+        onThresholdChange={setUnderThreshold}
+      />
+      <LeagueRoundFixturesCard
+        fixtures={leagueFixtures}
+        threshold={underThreshold}
+      />
 
       <div className="p-4 rounded-lg bg-white/10 text-white text-sm">
         Debug ligue: league {resolvedLeagueId ?? "--"} / saison {resolvedSeason ?? "--"} / charge {loading ? "..." : totalFetched} / FT {totalMatches}

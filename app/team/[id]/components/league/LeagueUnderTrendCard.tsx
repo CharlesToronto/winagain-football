@@ -105,9 +105,14 @@ export default function LeagueUnderTrendCard({
   }, [fixtures, threshold]);
 
   const totalSlots = rounds.length;
+  const mobileSlots = 10;
+  const chartWidthPct =
+    totalSlots > mobileSlots ? (totalSlots / mobileSlots) * 100 : 100;
+  const chartWidthStyle: Record<string, string> = {
+    "--chart-width": `${chartWidthPct}%`,
+  };
   const viewWidth = 100;
-  const viewHeight = 100;
-  const labelOffset = 10;
+  const viewHeight = 80;
   const slotWidth = totalSlots ? viewWidth / totalSlots : viewWidth;
   const barWidth = Math.max(0.8, slotWidth * 0.65);
 
@@ -181,12 +186,18 @@ export default function LeagueUnderTrendCard({
       {totalSlots === 0 ? (
         <p className="text-sm text-white/70">Aucune donnee disponible.</p>
       ) : (
-        <div className="relative w-full flex-1 min-h-0 select-none">
-          <svg
-            viewBox={`0 0 ${viewWidth} ${viewHeight + labelOffset}`}
-            preserveAspectRatio="none"
-            className="w-full h-full"
+        <div className="w-full flex-1 min-h-0 select-none flex flex-col">
+          <div
+            className="w-full flex-1 min-h-0 overflow-x-auto no-scrollbar sm:overflow-visible"
+            style={chartWidthStyle}
           >
+            <div className="w-[var(--chart-width)] sm:w-full h-full flex flex-col">
+              <div className="relative flex-1 min-h-0">
+                <svg
+                  viewBox={`0 0 ${viewWidth} ${viewHeight}`}
+                  preserveAspectRatio="none"
+                  className="w-full h-full font-sans"
+                >
             <defs>
               <linearGradient id="league-bars" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.9" />
@@ -214,15 +225,6 @@ export default function LeagueUnderTrendCard({
               );
             })}
 
-            <line
-              x1={0}
-              y1={viewHeight - (threshold / MAX_COUNT) * viewHeight}
-              x2={viewWidth}
-              y2={viewHeight - (threshold / MAX_COUNT) * viewHeight}
-              stroke={THEME_PINK}
-              strokeWidth={0.6}
-            />
-
             {bars.map((bar, idx) => (
               <rect
                 key={`bar-${idx}`}
@@ -236,41 +238,51 @@ export default function LeagueUnderTrendCard({
                 onMouseLeave={() => setHoverIdx(null)}
               />
             ))}
+                </svg>
 
-            {bars.map((bar, idx) => {
-              const labelValue = extractRoundNumber(bar.round);
-              const labelText = labelValue != null ? `${labelValue}` : bar.round;
-              return (
-                <text
-                  key={`label-${idx}`}
-                  x={bar.x}
-                  y={viewHeight + labelOffset - 2}
-                  fontSize={3.2}
-                  textAnchor="middle"
-                  fill="rgba(255,255,255,0.6)"
-                  fontWeight={600}
-                >
-                  {labelText}
-                </text>
-              );
-            })}
-          </svg>
-
-          {hovered ? (
-            <div
-              className="absolute px-3 py-2 bg-black/70 text-white text-xs rounded-lg border border-white/10 -translate-x-1/2 -translate-y-full"
-              style={{
-                left: `${(hovered.x / viewWidth) * 100}%`,
-                top: `${(hovered.y / viewHeight) * 100}%`,
-              }}
-            >
-              <div className="font-semibold">{hovered.round}</div>
-              <div>
-                Under -{threshold}: {hovered.value}/10
+                {hovered ? (
+                  <div
+                    className="absolute min-w-[160px] px-4 py-2 bg-black/70 text-white text-xs rounded-lg border border-white/10 -translate-x-1/2 -translate-y-full"
+                    style={{
+                      left: `${(hovered.x / viewWidth) * 100}%`,
+                      top: `${(hovered.y / viewHeight) * 100}%`,
+                    }}
+                  >
+                    <div className="font-semibold">{hovered.round}</div>
+                    <div>
+                      Under -{threshold}: {hovered.value}/{MAX_COUNT}
+                    </div>
+                    <div className="text-white/70">Matchs: {hovered.total}</div>
+                  </div>
+                ) : null}
               </div>
-              <div className="text-white/70">Matchs: {hovered.total}</div>
+
+              <div
+                className="mt-3 grid w-full text-center"
+                style={{
+                  gridTemplateColumns: `repeat(${totalSlots}, minmax(0, 1fr))`,
+                }}
+              >
+                {bars.map((bar, idx) => {
+                  const labelValue = extractRoundNumber(bar.round);
+                  const labelText = labelValue != null ? `${labelValue}` : bar.round;
+                  return (
+                    <div
+                      key={`label-${idx}`}
+                      className="flex flex-col items-center leading-tight tabular-nums"
+                    >
+                      <span className="text-[10px] text-white/55 font-semibold">
+                        {bar.value}/{MAX_COUNT}
+                      </span>
+                      <span className="text-[11px] text-white/80 font-semibold">
+                        {labelText}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       )}
     </div>
