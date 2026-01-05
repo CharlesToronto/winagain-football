@@ -64,6 +64,7 @@ export default function ProbabilitiesView({
   cutoffDate,
   overUnderMatchKeys,
   overUnderHighlight,
+  showOpponentComparison,
   filter,
   onFilterChange,
 }: {
@@ -75,12 +76,12 @@ export default function ProbabilitiesView({
   cutoffDate?: Date | null;
   overUnderMatchKeys?: Set<string>;
   overUnderHighlight?: boolean;
+  showOpponentComparison?: boolean;
   filter: FilterKey;
   onFilterChange: (value: FilterKey) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [opponentFixtures, setOpponentFixtures] = useState<Fixture[]>([]);
 
   const { engines, computeStreaks } = getProbabilityEngines();
@@ -95,9 +96,10 @@ export default function ProbabilitiesView({
   };
   const streaks = streakStats;
   const calendarActive = Boolean(cutoffDate);
-  const cardBorderClass = calendarActive ? "rounded-xl ring-1 ring-red-500/70" : "";
+  const cardBorderClass = calendarActive ? "rounded-xl border border-red-500/70" : "";
+  const opponentComparisonActive = Boolean(showOpponentComparison);
   const opponentStats =
-    showOpponentComparison && opponentFixtures.length > 0
+    opponentComparisonActive && opponentFixtures.length > 0
       ? computeEngine(opponentFixtures ?? [])
       : null;
 
@@ -144,19 +146,6 @@ export default function ProbabilitiesView({
     }
     loadOpponent();
   }, [nextOpponentId, range, cutoffDate]);
-
-  useEffect(() => {
-    setShowOpponentComparison(false);
-  }, [nextOpponentId]);
-
-  const handleOpponentClick = () => {
-    if (!nextOpponentId) return;
-    if (!showOpponentComparison) {
-      setShowOpponentComparison(true);
-      return;
-    }
-    router.push(`/team/${nextOpponentId}?tab=stats`);
-  };
 
   const handleAiPrompt = (cardTitle: string, detail?: string) => {
     if (!Number.isFinite(teamId)) return;
@@ -208,15 +197,6 @@ export default function ProbabilitiesView({
           </button>
         </div>
 
-        {nextOpponentId ? (
-          <button
-            type="button"
-            onClick={handleOpponentClick}
-            className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-sm font-semibold transition"
-          >
-            Visualiser le prochain adversaire
-          </button>
-        ) : null}
       </div>
 
       <div className="md:hidden space-y-6">
@@ -318,7 +298,7 @@ export default function ProbabilitiesView({
             <CardOverUnderHomeAway
               fixtures={fixtures ?? []}
               opponentFixtures={opponentFixtures}
-              showOpponentComparison={showOpponentComparison}
+              showOpponentComparison={opponentComparisonActive}
               highlightKeys={overUnderMatchKeys}
               highlightActive={overUnderHighlight}
             />

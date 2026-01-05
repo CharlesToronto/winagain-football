@@ -1,81 +1,105 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchApi } from "@/lib/football";
-import { COMPETITION_IDS_BY_COUNTRY, ALL_COMPETITION_IDS } from "@/app/lib/data/competitionIds";
+import { ALL_COMPETITION_IDS } from "@/app/lib/data/competitionIds";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const DEFAULT_SEASON = 2025;
+
+export async function GET(request: Request) {
   const supabase = createClient();
 
   try {
-    const { data: fixtures, error } = await supabase
-      .from("fixtures")
-      .select("id, date_utc, competition_id, season");
+    const url = new URL(request.url);
+    const seasonParam = Number(url.searchParams.get("season"));
+    const season = Number.isFinite(seasonParam) ? seasonParam : DEFAULT_SEASON;
+    const leagueParam = Number(url.searchParams.get("league"));
+    const leagues = Number.isFinite(leagueParam) ? [leagueParam] : ALL_COMPETITION_IDS;
 
-    if (error) {
-      return NextResponse.json({ error: "DB fixtures error", details: error }, { status: 500 });
-    }
+    let upserted = 0;
+    let fixturesProcessed = 0;
+    let leaguesProcessed = 0;
 
-    let inserted = 0;
-    let updated = 0;
+    for (const leagueId of leagues) {
+      if (!Number.isFinite(leagueId)) continue;
+      leaguesProcessed += 1;
 
-    for (const fx of fixtures) {
-      if (fx.season !== 2025) continue;
-      if (!ALL_COMPETITION_IDS.includes(fx.competition_id)) continue;
+      let page = 1;
+      let totalPages = 1;
 
-      // Fetch all odds (API returns historical timestamps)
-      const api = await fetchApi("odds", {
-        fixture: fx.id,
-      });
+      do {
+        const api = await fetchApi("odds", {
+          league: leagueId,
+          season,
+          page,
+        });
 
-      const rawOdds = api.response?.[0]?.bookmakers || [];
+        totalPages = Number(api?.paging?.total ?? 1);
+        const fixtures = api?.response ?? [];
 
-      for (const bm of rawOdds) {
-        for (const bet of bm.bets) {
-          const marketId = bet.id;
-          const marketName = bet.name;
+        for (const fixture of fixtures) {
+          const fixtureId = fixture?.fixture?.id;
+          if (!fixtureId) continue;
+          fixturesProcessed += 1;
 
-          const snap = bet.values
-            .sort(
-              (a: any, b: any) =>
-                new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-            )[0];
+          const fixtureUpdate = fixture?.update ?? null;
+          const bookmakers = fixture?.bookmakers ?? [];
 
-          const updateTime = bm.update || api.response?.[0]?.update;
+          for (const bm of bookmakers) {
+            const bookmakerUpdate = bm?.update ?? fixtureUpdate ?? null;
+            const bets = bm?.bets ?? [];
 
-          if (!snap) continue;
+            for (const bet of bets) {
+              const marketId = bet?.id ?? null;
+              const marketName = bet?.name ?? null;
+              if (!marketId || !marketName) continue;
 
-          const { error: upsertError } = await supabase.from("fixture_odds").upsert(
-            {
-              fixture_id: fx.id,
-              league_id: fx.competition_id,
-              season: fx.season,
+              const values = bet?.values ?? [];
+              for (const entry of values) {
+                const label = entry?.value ?? null;
+                const oddValue = Number(entry?.odd ?? entry?.odds ?? null);
+                if (!label || !Number.isFinite(oddValue)) continue;
 
-              market_id: marketId,
-              market_name: marketName,
+                const updateTime =
+                  entry?.updated_at ?? entry?.update ?? bookmakerUpdate ?? fixtureUpdate ?? null;
 
-              bookmaker_id: bm.id,
-              bookmaker_name: bm.name,
+                const { error: upsertError } = await supabase
+                  .from("fixture_odds")
+                  .upsert(
+                    {
+                      fixture_id: fixtureId,
+                      league_id: leagueId,
+                      season,
+                      market_id: marketId,
+                      market_name: marketName,
+                      bookmaker_id: bm?.id ?? null,
+                      bookmaker_name: bm?.name ?? null,
+                      label,
+                      value: oddValue,
+                      update_time: updateTime,
+                    },
+                    {
+                      onConflict: "fixture_id, market_id, bookmaker_id, label",
+                    }
+                  );
 
-              label: snap.value,
-              value: snap.odd,
-              update_time: updateTime,
-            },
-            {
-              onConflict: "fixture_id, market_id, bookmaker_id, label",
+                if (!upsertError) upserted += 1;
+              }
             }
-          );
-
-          if (!upsertError) inserted++;
+          }
         }
-      }
+
+        page += 1;
+      } while (page <= totalPages);
     }
 
     return NextResponse.json({
       ok: true,
-      inserted,
-      updated,
+      season,
+      leagues: leaguesProcessed,
+      fixtures: fixturesProcessed,
+      upserted,
     });
   } catch (err: any) {
     return NextResponse.json({ error: true, details: err.message });

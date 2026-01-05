@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -6,7 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
+import OddsView from "./components/odds/OddsView";
 import TeamAiAnalysis from "./components/TeamAiAnalysis";
+import LeagueStatsView from "./components/league/LeagueStatsView";
 import OddsConverter from "@/app/home/components/OddsConverter";
 import StandingsList from "@/app/league/[id]/StandingsList";
 import computeFT from "@/lib/analysisEngine/computeFT";
@@ -45,7 +47,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     return new Date(asOfDate.getTime() - 24 * 60 * 60 * 1000);
   }, [asOfDate]);
 
-  const [tab, setTab] = useState<"dashboard" | "stats" | "odds">("dashboard");
+  const [tab, setTab] = useState<"dashboard" | "stats" | "odds" | "converter" | "league">("dashboard");
   const [probabilityFilter, setProbabilityFilter] = useState<"FT" | "HT" | "2H">("FT");
   const [team, setTeam] = useState<TeamData>(null);
   const [league, setLeague] = useState<LeagueData>(null);
@@ -59,11 +61,13 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [favorites, setFavorites] = useState<FavoriteTeam[]>([]);
   const [opponentFixtures, setOpponentFixtures] = useState<FixtureItem[]>([]);
   const [overUnderHighlight, setOverUnderHighlight] = useState(false);
+  const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarFixtures, setCalendarFixtures] = useState<FixtureItem[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const copyTimeoutRef = useRef<number | null>(null);
+  const opponentToggleTimeoutRef = useRef<number | null>(null);
   const tabParam = searchParams.get("tab");
   const teamId = Number(team?.id);
   const effectiveRange = range;
@@ -148,6 +152,10 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       setTab("dashboard");
     } else if (tabParam === "odds") {
       setTab("odds");
+    } else if (tabParam === "converter") {
+      setTab("converter");
+    } else if (tabParam === "league") {
+      setTab("league");
     } else if (tabParam === "ai") {
       setTab("dashboard");
     }
@@ -228,6 +236,11 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     () => (fixtures?.length ? computeFT(fixtures) : null),
     [fixtures]
   );
+  const leagueIdForStats = useMemo(() => {
+    if (league?.id != null) return Number(league.id);
+    const fallback = fixtures?.[0]?.competition_id ?? null;
+    return fallback != null ? Number(fallback) : null;
+  }, [league?.id, fixtures]);
   const opponentStats = useMemo(
     () => (opponentFixtures?.length ? computeFT(opponentFixtures) : null),
     [opponentFixtures]
@@ -260,6 +273,10 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     }
   }, [overUnderMatchActive]);
 
+  useEffect(() => {
+    setShowOpponentComparison(false);
+  }, [nextOpponentId]);
+
 
   const isFavorite = favorites.some((fav) => fav.id === teamId);
   const toggleFavorite = () => {
@@ -280,13 +297,19 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   };
 
   const analysis = fixtures;
+  const opponentToggleActive = Boolean(nextOpponentId);
+  const opponentToggleTitle = opponentToggleActive
+    ? showOpponentComparison
+      ? "Stats adversaire actives (clic pour masquer)"
+      : "Afficher stats adversaire (double clic pour ouvrir)"
+    : "Aucun adversaire disponible";
   const overUnderTitle = overUnderMatchActive
     ? overUnderHighlight
       ? "Surlignage over/under actif"
       : "Surligner les stats 75-99% ou 1-25%"
     : "Aucun match de stats 75-99% ou 1-25%";
   const trendSignalTitle = trendSignalDetails.title;
-  const copyTitle = "Copier le nom (clic) • Copier le match (double clic)";
+  const copyTitle = "Copier le nom (clic) â€¢ Copier le match (double clic)";
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -305,6 +328,13 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     }
   };
 
+  const clearOpponentToggleTimeout = () => {
+    if (opponentToggleTimeoutRef.current !== null) {
+      window.clearTimeout(opponentToggleTimeoutRef.current);
+      opponentToggleTimeoutRef.current = null;
+    }
+  };
+
   const handleCopyClick = () => {
     clearCopyTimeout();
     copyTimeoutRef.current = window.setTimeout(() => {
@@ -317,6 +347,21 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     clearCopyTimeout();
     const matchLabel = getNextMatchLabel(effectiveNextMatch, team?.name ?? "");
     copyToClipboard(matchLabel);
+  };
+
+  const handleOpponentToggleClick = () => {
+    if (!nextOpponentId) return;
+    clearOpponentToggleTimeout();
+    opponentToggleTimeoutRef.current = window.setTimeout(() => {
+      setShowOpponentComparison((prev) => !prev);
+      opponentToggleTimeoutRef.current = null;
+    }, 250);
+  };
+
+  const handleOpponentToggleDoubleClick = () => {
+    if (!nextOpponentId) return;
+    clearOpponentToggleTimeout();
+    router.push(`/team/${nextOpponentId}?tab=stats`);
   };
 
   const updateQueryParams = (updates: Record<string, string | null>) => {
@@ -389,16 +434,16 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             if (!overUnderMatchActive) return;
             setOverUnderHighlight((prev) => !prev);
           }}
-          disabled={!overUnderMatchActive}
+          aria-disabled={!overUnderMatchActive}
           aria-pressed={overUnderHighlight}
           aria-label={overUnderTitle}
           title={overUnderTitle}
-          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition disabled:opacity-60 disabled:cursor-not-allowed ${
+          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
             overUnderHighlight
               ? "text-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
               : overUnderMatchActive
               ? "text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.7)]"
-              : "text-white/90"
+              : "text-white/70"
           }`}
         >
           <svg
@@ -414,6 +459,48 @@ export default function TeamPage({ params }: { params: { id: string } }) {
               strokeLinecap="round"
               strokeLinejoin="round"
               d="M16.5 16.5L21 21"
+            />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={handleOpponentToggleClick}
+          onDoubleClick={handleOpponentToggleDoubleClick}
+          disabled={!opponentToggleActive}
+          aria-disabled={!opponentToggleActive}
+          aria-pressed={showOpponentComparison}
+          aria-label={opponentToggleTitle}
+          title={opponentToggleTitle}
+          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition disabled:cursor-not-allowed ${
+            showOpponentComparison
+              ? "text-orange-300 shadow-[0_0_12px_rgba(251,146,60,0.7)]"
+              : opponentToggleActive
+              ? "text-orange-200 hover:bg-white/20"
+              : "text-white/50"
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            aria-hidden
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 20l6-2 8-8-4-4-8 8-2 6z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M14 6l4 4"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 21l3-3"
             />
           </svg>
         </button>
@@ -502,7 +589,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           onClick={handleResetDate}
           className="mb-4 w-full rounded-lg border border-red-500/70 bg-red-600/70 px-4 py-2 text-sm text-white hover:bg-red-600/80 transition"
         >
-          Stats du {bannerLabel} · Revenir a aujourd'hui
+          Stats du {bannerLabel} Â· Revenir a aujourd'hui
         </button>
       ) : null}
       {calendarOpen ? (
@@ -648,7 +735,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 
         <div>
           <h1 className="text-3xl font-bold">{team.name}</h1>
-          {league && <p className="text-sm opacity-80 mt-1">{league.name} — Season 2025</p>}
+          {league && <p className="text-sm opacity-80 mt-1">{league.name} â€” Season 2025</p>}
         </div>
       </div>
 
@@ -699,7 +786,18 @@ export default function TeamPage({ params }: { params: { id: string } }) {
               : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
-          Probabilités
+          Team Stats
+        </button>
+
+        <button
+          onClick={() => setTab("converter")}
+          className={
+            tab === "converter"
+              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
+              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
+          }
+        >
+          Convertisseur
         </button>
 
         <button
@@ -710,7 +808,18 @@ export default function TeamPage({ params }: { params: { id: string } }) {
               : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
           }
         >
-          Convertisseur
+          Odds
+        </button>
+
+        <button
+          onClick={() => setTab("league")}
+          className={
+            tab === "league"
+              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
+              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
+          }
+        >
+          Stats League
         </button>
       </div>
 
@@ -739,8 +848,29 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           nextOpponentName={nextOpponentName}
           overUnderMatchKeys={overUnderMatchKeys}
           overUnderHighlight={overUnderHighlight}
+          showOpponentComparison={showOpponentComparison}
           filter={probabilityFilter}
           onFilterChange={setProbabilityFilter}
+        />
+      ) : tab === "odds" ? (
+        <OddsView
+          teamId={teamId}
+          nextOpponentId={nextOpponentId}
+          leagueId={league?.id ?? null}
+          season={league?.season ?? CURRENT_SEASON}
+          isTeamHome={
+            Number.isFinite(teamId) && effectiveNextMatch?.teams?.home?.id != null
+              ? effectiveNextMatch.teams.home.id === teamId
+              : null
+          }
+          range={effectiveRange}
+          cutoffDate={cutoffDate}
+          filter={probabilityFilter}
+        />
+      ) : tab === "league" ? (
+        <LeagueStatsView
+          leagueId={leagueIdForStats}
+          season={CURRENT_SEASON}
         />
       ) : (
         <div className="max-w-4xl">
@@ -752,7 +882,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       <div className="mb-6 mt-6 p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded text-white">
         <h2 className="font-semibold mb-2">Debug fixtures</h2>
         <p className="text-xs opacity-70 text-white/70">
-          Matchs utilisés par le moteur : {stats?.played ?? 0}
+          Matchs utilisÃ©s par le moteur : {stats?.played ?? 0}
         </p>
       </div>
     </div>
@@ -948,12 +1078,12 @@ function DashboardView({
 
   const standingsTable = Array.isArray(standings) ? standings : [];
 
-  // Filtrer les fixtures valides (sécurise contre undefined)
+  // Filtrer les fixtures valides (sÃ©curise contre undefined)
   const validFixtures = fixturesLimited.filter(
     (f) => f?.fixture?.date
   );
 
-  // Trier avec fallback sécurisé
+  // Trier avec fallback sÃ©curisÃ©
   const fixturesSorted = [...validFixtures].sort((a, b) => {
     const dateA = new Date(a.fixture.date).getTime();
     const dateB = new Date(b.fixture.date).getTime();
@@ -1013,14 +1143,14 @@ function DashboardView({
       </div>
 
       <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-        <h2 className="font-semibold text-lg mb-3">Résumé</h2>
+        <h2 className="font-semibold text-lg mb-3">RÃ©sumÃ©</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <Stat label="Matchs joués" value={stats.played} />
+          <Stat label="Matchs jouÃ©s" value={stats.played} />
           <Stat label="Victoires" value={stats.wins} />
           <Stat label="Nuls" value={stats.draws} />
-          <Stat label="Défaites" value={stats.losses} />
+          <Stat label="DÃ©faites" value={stats.losses} />
           <Stat
-            label="Buts marqués"
+            label="Buts marquÃ©s"
             value={
               <>
                 {goalsFor}{" "}
@@ -1031,7 +1161,7 @@ function DashboardView({
             }
           />
           <Stat
-            label="Buts encaissés"
+            label="Buts encaissÃ©s"
             value={
               <>
                 {goalsAgainst}{" "}
@@ -1057,12 +1187,12 @@ function DashboardView({
               }`}
             >
 
-              {/* Date + Heure + Journée */}
+              {/* Date + Heure + JournÃ©e */}
               <div className="text-sm text-gray-300">
-                {format(new Date(computedNextMatch.fixture.date), "dd MMM yyyy")} •{" "}
+                {format(new Date(computedNextMatch.fixture.date), "dd MMM yyyy")} â€¢{" "}
                 {format(new Date(computedNextMatch.fixture.date), "HH:mm")}  
                 {computedNextMatch.league.round ? (
-                    <> • Journée {computedNextMatch.league.round.replace("Regular Season - ", "")}</>
+                    <> â€¢ JournÃ©e {computedNextMatch.league.round.replace("Regular Season - ", "")}</>
                 ) : null}
                 {computedNextMatch.fixture?.id ? (
                   <span className="text-xs text-white/75 font-normal">
@@ -1122,7 +1252,7 @@ function DashboardView({
       <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/10 p-6 text-white md:col-span-2">
         <h2 className="text-xl font-semibold mb-4">Forme</h2>
 
-        {/* SÉRIE */}
+        {/* SÃ‰RIE */}
         <div className="text-sm font-bold mt-1 mb-3">
           {formLine.map((letter, idx) => {
             const isFirst = idx === 0;
@@ -1143,7 +1273,7 @@ function DashboardView({
           })}
         </div>
 
-        {/* LISTE DÉTAILLÉE DES MATCHS */}
+        {/* LISTE DÃ‰TAILLÃ‰E DES MATCHS */}
         <div className="space-y-1">
           {formMatches.map((f: any, idx: number) => {
             const match = {
@@ -1196,7 +1326,7 @@ function DashboardView({
               onClick={() => setShowAllForm(!showAllForm)}
               className="text-white text-sm font-semibold hover:underline"
             >
-              {showAllForm ? "Réduire" : "Voir plus"}
+              {showAllForm ? "RÃ©duire" : "Voir plus"}
             </button>
           </div>
         )}
@@ -1221,3 +1351,6 @@ function formatRatio(value: number, total: number) {
   const rounded = Math.round(ratio * 100) / 100;
   return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(2);
 }
+
+
+
