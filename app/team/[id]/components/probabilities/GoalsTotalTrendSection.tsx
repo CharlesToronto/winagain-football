@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import GoalsTrendCard, { getGoalsForMode, type Mode } from "./GoalsTrendCard";
 import AiPromptButton from "./AiPromptButton";
 
@@ -179,16 +179,39 @@ export default function GoalsTotalTrendSection({
   cardBorderClass?: string;
 }) {
   const [threshold, setThreshold] = useState(3.5);
+  const [mobileIndex, setMobileIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const mobileSlides = 2;
   const entries = useMemo(() => buildEntries(fixtures ?? [], mode), [fixtures, mode]);
   const thresholdLabel = `+${formatNumber(threshold)}`;
+
+  const handleCarouselScroll = () => {
+    const el = carouselRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const nextIndex = Math.round(el.scrollLeft / el.clientWidth);
+    const bounded = Math.max(0, Math.min(mobileSlides - 1, nextIndex));
+    if (bounded !== mobileIndex) {
+      setMobileIndex(bounded);
+    }
+  };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-center gap-2 md:hidden" aria-hidden="true">
-        <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
-        <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+        {Array.from({ length: mobileSlides }).map((_, idx) => (
+          <span
+            key={`trend-total-dot-${idx}`}
+            className={`h-1.5 w-1.5 rounded-full ${
+              idx === mobileIndex ? "bg-blue-400" : "bg-white/30"
+            }`}
+          />
+        ))}
       </div>
-      <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible">
+      <div
+        ref={carouselRef}
+        onScroll={handleCarouselScroll}
+        className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible"
+      >
         <div className="order-2 md:order-1 snap-start shrink-0 w-full md:w-auto md:col-span-1">
           <div className="space-y-2">
             {onAiPrompt ? (

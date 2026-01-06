@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CardDoubleChance from "../probabilities/CardDoubleChance";
 import CardOverUnder from "../probabilities/CardOverUnder";
 import LeagueUnderTrendCard from "./LeagueUnderTrendCard";
@@ -20,6 +20,9 @@ export default function LeagueStatsView({
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [underThreshold, setUnderThreshold] = useState(3.5);
+  const [mobileIndex, setMobileIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const mobileSlides = 2;
   const resolvedLeagueId = useMemo(() => {
     if (leagueId == null) return null;
     const parsed = Number(leagueId);
@@ -94,14 +97,34 @@ export default function LeagueStatsView({
   const totalFetched = allFixtures.length;
   const cardBorderClass = "";
 
+  const handleCarouselScroll = () => {
+    const el = carouselRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const nextIndex = Math.round(el.scrollLeft / el.clientWidth);
+    const bounded = Math.max(0, Math.min(mobileSlides - 1, nextIndex));
+    if (bounded !== mobileIndex) {
+      setMobileIndex(bounded);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-center gap-2 md:hidden" aria-hidden="true">
-        <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
-        <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+        {Array.from({ length: mobileSlides }).map((_, idx) => (
+          <span
+            key={`league-dot-${idx}`}
+            className={`h-1.5 w-1.5 rounded-full ${
+              idx === mobileIndex ? "bg-blue-400" : "bg-white/30"
+            }`}
+          />
+        ))}
       </div>
       <div className="md:hidden">
-        <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory">
+        <div
+          ref={carouselRef}
+          onScroll={handleCarouselScroll}
+          className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory"
+        >
           <div className="snap-start shrink-0 w-full">
             <div className={cardBorderClass}>
               <CardOverUnder data={stats} streaks={null} />

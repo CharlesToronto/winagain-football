@@ -12,6 +12,34 @@ export type TeamAdapterResult = {
   standings: any[];
 };
 
+const STANDINGS_SEASON = 2025;
+
+function resolveLeagueIdFromFixtures(fixtures: any[], season: number) {
+  if (!Array.isArray(fixtures) || fixtures.length === 0) return null;
+  const seasonMatches = fixtures.filter(
+    (fixture: any) => Number(fixture?.season) === season
+  );
+  const candidates = seasonMatches.length ? seasonMatches : fixtures;
+  const counts = new Map<number, number>();
+  candidates.forEach((fixture: any) => {
+    const rawId = fixture?.competition_id;
+    const id = Number(rawId);
+    if (!Number.isFinite(id)) return;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  });
+
+  let bestId: number | null = null;
+  let bestCount = 0;
+  counts.forEach((count, id) => {
+    if (count > bestCount) {
+      bestCount = count;
+      bestId = id;
+    }
+  });
+
+  return bestId;
+}
+
 export async function loadTeamData(
   teamIdRaw: string,
   range: RangeFilter,
@@ -22,7 +50,6 @@ export async function loadTeamData(
   const teamData = await fetchApi("teams", { id: teamIdRaw });
   const apiTeam = teamData?.response?.[0];
   const team = apiTeam?.team ?? null;
-  const league = apiTeam?.league ?? null;
 
   // Prochain match via API Football
   let nextMatch = null;
@@ -35,20 +62,26 @@ export async function loadTeamData(
     }
   }
 
-  // Fetch standings after setting league
+  const allFixtures = await getTeamFixturesAllSeasons(id);
+  const leagueFromApi = apiTeam?.league ?? null;
+  const leagueFromNext = nextMatch?.league ?? null;
+  const league = leagueFromApi ?? leagueFromNext ?? null;
+  const leagueId =
+    leagueFromApi?.id ??
+    leagueFromNext?.id ??
+    resolveLeagueIdFromFixtures(allFixtures, STANDINGS_SEASON);
+
+  // Fetch standings after resolving league
   let standings: any[] = [];
 
-  if (apiTeam?.league?.id) {
-    const season = apiTeam?.league?.season ?? 2025;
+  if (leagueId) {
     const data = await fetchApi("standings", {
-      league: apiTeam.league.id,
-      season,
+      league: leagueId,
+      season: STANDINGS_SEASON,
     });
 
     standings = data.response?.[0]?.league?.standings?.[0] || [];
   }
-
-  const allFixtures = await getTeamFixturesAllSeasons(id);
   let fixtures: any[] = [];
   let stats: any = null;
 
@@ -58,7 +91,7 @@ export async function loadTeamData(
     );
 
     if (range === "season") {
-      played = played.filter((f: any) => f.season === 2025);
+      played = played.filter((f: any) => f.season === STANDINGS_SEASON);
     }
 
     if (cutoffDate) {

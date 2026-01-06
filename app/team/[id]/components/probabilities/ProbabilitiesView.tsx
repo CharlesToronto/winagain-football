@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CardResultSimple from "./CardResultSimple";
 import CardOverUnder from "./CardOverUnder";
 import CardCorners from "./CardCorners";
@@ -83,6 +83,9 @@ export default function ProbabilitiesView({
   const router = useRouter();
   const pathname = usePathname();
   const [opponentFixtures, setOpponentFixtures] = useState<Fixture[]>([]);
+  const [mobileSummaryIndex, setMobileSummaryIndex] = useState(0);
+  const mobileSummaryRef = useRef<HTMLDivElement | null>(null);
+  const mobileSummarySlides = 2;
 
   const { engines, computeStreaks } = getProbabilityEngines();
 
@@ -98,6 +101,16 @@ export default function ProbabilitiesView({
   const calendarActive = Boolean(cutoffDate);
   const cardBorderClass = calendarActive ? "rounded-xl border border-red-500/70" : "";
   const opponentComparisonActive = Boolean(showOpponentComparison);
+
+  const handleSummaryScroll = () => {
+    const el = mobileSummaryRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const nextIndex = Math.round(el.scrollLeft / el.clientWidth);
+    const bounded = Math.max(0, Math.min(mobileSummarySlides - 1, nextIndex));
+    if (bounded !== mobileSummaryIndex) {
+      setMobileSummaryIndex(bounded);
+    }
+  };
   const opponentStats =
     opponentComparisonActive && opponentFixtures.length > 0
       ? computeEngine(opponentFixtures ?? [])
@@ -167,12 +180,14 @@ export default function ProbabilitiesView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center justify-center mb-6">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             onClick={() => onFilterChange("FT")}
-            className={`px-4 py-2 rounded-md ${
-              filter === "FT" ? "bg-green-700 text-withe" : "bg-white/10"
+            className={`px-3 py-1 text-xs rounded-md border transition ${
+              filter === "FT"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white/80"
             }`}
           >
             Full Game
@@ -180,8 +195,10 @@ export default function ProbabilitiesView({
 
           <button
             onClick={() => onFilterChange("HT")}
-            className={`px-4 py-2 rounded-md ${
-              filter === "HT" ? "bg-green-600 text-white" : "bg-white/10"
+            className={`px-3 py-1 text-xs rounded-md border transition ${
+              filter === "HT"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white/80"
             }`}
           >
             1 Half
@@ -189,23 +206,34 @@ export default function ProbabilitiesView({
 
           <button
             onClick={() => onFilterChange("2H")}
-            className={`px-4 py-2 rounded-md ${
-              filter === "2H" ? "bg-green-600 text-white" : "bg-white/10"
+            className={`px-3 py-1 text-xs rounded-md border transition ${
+              filter === "2H"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white/80"
             }`}
           >
             2 Half
           </button>
         </div>
-
       </div>
 
       <div className="md:hidden space-y-6">
         <div className="space-y-2">
           <div className="flex items-center justify-center gap-2" aria-hidden="true">
-            <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
-            <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+            {Array.from({ length: mobileSummarySlides }).map((_, idx) => (
+              <span
+                key={`summary-dot-${idx}`}
+                className={`h-1.5 w-1.5 rounded-full ${
+                  idx === mobileSummaryIndex ? "bg-blue-400" : "bg-white/30"
+                }`}
+              />
+            ))}
           </div>
-          <div className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory">
+          <div
+            ref={mobileSummaryRef}
+            onScroll={handleSummaryScroll}
+            className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory"
+          >
             <div className="snap-start shrink-0 w-full">
               <div className="space-y-2">
                 <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
@@ -269,7 +297,7 @@ export default function ProbabilitiesView({
         </div>
       </div>
 
-      <GoalsScoredTrendSection
+      <GoalsTotalTrendSection
         fixtures={fixtures ?? []}
         opponentFixtures={opponentFixtures}
         opponentName={nextOpponentName ?? "Adversaire"}
@@ -306,7 +334,7 @@ export default function ProbabilitiesView({
         </div>
       </div>
 
-      <GoalsTotalTrendSection
+      <GoalsScoredTrendSection
         fixtures={fixtures ?? []}
         opponentFixtures={opponentFixtures}
         opponentName={nextOpponentName ?? "Adversaire"}

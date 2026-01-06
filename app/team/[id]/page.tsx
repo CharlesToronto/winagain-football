@@ -14,6 +14,7 @@ import StandingsList from "@/app/league/[id]/StandingsList";
 import computeFT from "@/lib/analysisEngine/computeFT";
 import { loadTeamData, TeamAdapterResult } from "@/lib/adapters/team";
 import { FAVORITES_STORAGE_KEY, type FavoriteTeam } from "@/lib/favorites";
+import { fetchApi } from "@/lib/football";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
 
 type StatsState = Record<string, any> | null;
@@ -30,6 +31,7 @@ const OVER_UNDER_LOW_MIN = 1;
 const OVER_UNDER_LOW_MAX = 25;
 const LAST_MATCH_TOTAL_GOALS_THRESHOLD = 3.5;
 const DRAW_PERCENT_MAX = 30;
+const H2H_SEASONS = [2025, 2024];
 
 export default function TeamPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -63,6 +65,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [overUnderHighlight, setOverUnderHighlight] = useState(false);
   const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [calendarFixtures, setCalendarFixtures] = useState<FixtureItem[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
@@ -71,6 +74,15 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const tabParam = searchParams.get("tab");
   const teamId = Number(team?.id);
   const effectiveRange = range;
+  const rangeOptions: RangeOption[] = ["season", 50, 40, 30, 20, 10];
+  const tabOptions = [
+    { key: "dashboard", label: "Charly IA" },
+    { key: "stats", label: "Team Stats" },
+    { key: "league", label: "League Stats" },
+    { key: "odds", label: "Odds" },
+  ] as const;
+  const formatRangeLabel = (value: RangeOption) =>
+    value === "season" ? "Saison 2025" : `${value} matchs`;
   const selectedMatch = useMemo(() => {
     if (!asOfParam) return null;
     return calendarFixtures.find((fixture) => fixture.date_utc === asOfParam) ?? null;
@@ -309,7 +321,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       : "Surligner les stats 75-99% ou 1-25%"
     : "Aucun match de stats 75-99% ou 1-25%";
   const trendSignalTitle = trendSignalDetails.title;
-  const copyTitle = "Copier le nom (clic) â€¢ Copier le match (double clic)";
+  const copyTitle = "Copier le nom (clic) - Copier le match (double clic)";
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -404,79 +416,200 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     <div className="min-h-screen w-full p-6 text-white relative">
       <div className="fixed bottom-24 right-4 flex flex-wrap items-center justify-end gap-2 z-50 max-w-[90vw] md:top-6 md:right-6 md:bottom-auto mobile-actions">
         <div
-          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-            trendSignalActive
-              ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-              : "text-white/90"
-          }`}
-          role="img"
-          aria-label={trendSignalTitle}
-          title={trendSignalTitle}
+          className={`${
+            actionsOpen ? "flex" : "hidden"
+          } flex-wrap items-center justify-end gap-2`}
         >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
+          <div
+            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
+              trendSignalActive
+                ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+                : "text-white/90"
+            }`}
+            role="img"
+            aria-label={trendSignalTitle}
+            title={trendSignalTitle}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 19V5m0 0l-6 6m6-6l6 6"
-            />
-          </svg>
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 19V5m0 0l-6 6m6-6l6 6"
+              />
+            </svg>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!overUnderMatchActive) return;
+              setOverUnderHighlight((prev) => !prev);
+            }}
+            aria-disabled={!overUnderMatchActive}
+            aria-pressed={overUnderHighlight}
+            aria-label={overUnderTitle}
+            title={overUnderTitle}
+            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
+              overUnderHighlight
+                ? "text-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
+                : overUnderMatchActive
+                ? "text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.7)]"
+                : "text-white/70"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="6" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 16.5L21 21"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleOpponentToggleClick}
+            onDoubleClick={handleOpponentToggleDoubleClick}
+            disabled={!opponentToggleActive}
+            aria-disabled={!opponentToggleActive}
+            aria-pressed={showOpponentComparison}
+            aria-label={opponentToggleTitle}
+            title={opponentToggleTitle}
+            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition disabled:cursor-not-allowed ${
+              showOpponentComparison
+                ? "text-orange-300 shadow-[0_0_12px_rgba(251,146,60,0.7)]"
+                : opponentToggleActive
+                ? "text-orange-200 hover:bg-white/20"
+                : "text-white/50"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 20l6-2 8-8-4-4-8 8-2 6z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M14 6l4 4"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 21l3-3"
+              />
+            </svg>
+          </button>
+          <span className="h-6 w-[2px] bg-white/30" aria-hidden />
+          <button
+            type="button"
+            onClick={() => setCalendarOpen(true)}
+            aria-label="Calendrier des matchs"
+            title="Calendrier des matchs"
+            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
+              asOfDate
+                ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+                : "text-white/90 hover:bg-white/20"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M8 3v4M16 3v4M3 9h18" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            aria-pressed={isFavorite}
+            aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            className="w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition flex items-center justify-center"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill={isFavorite ? "#facc15" : "none"}
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M11.48 3.5a.7.7 0 0 1 1.04 0l2.36 2.4c.2.2.46.32.74.35l3.33.5a.7.7 0 0 1 .39 1.2l-2.4 2.35a.7.7 0 0 0-.2.62l.58 3.3a.7.7 0 0 1-1.01.74l-2.98-1.56a.7.7 0 0 0-.65 0l-2.98 1.56a.7.7 0 0 1-1.01-.74l.58-3.3a.7.7 0 0 0-.2-.62L4.8 7.95a.7.7 0 0 1 .39-1.2l3.33-.5a.7.7 0 0 0 .74-.35l2.36-2.4Z"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyClick}
+            onDoubleClick={handleCopyDoubleClick}
+            className={`w-9 h-9 rounded-full bg-white/15 border border-white/20 hover:bg-white/25 flex items-center justify-center backdrop-blur-sm transition ${
+              copied
+                ? "text-white shadow-[0_0_12px_rgba(255,255,255,0.6)]"
+                : "text-white/80 hover:text-white"
+            }`}
+            title={copyTitle}
+            aria-label={copyTitle}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 3h7l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 3v4h4"
+              />
+            </svg>
+          </button>
         </div>
         <button
           type="button"
-          onClick={() => {
-            if (!overUnderMatchActive) return;
-            setOverUnderHighlight((prev) => !prev);
-          }}
-          aria-disabled={!overUnderMatchActive}
-          aria-pressed={overUnderHighlight}
-          aria-label={overUnderTitle}
-          title={overUnderTitle}
-          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-            overUnderHighlight
-              ? "text-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
-              : overUnderMatchActive
-              ? "text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.7)]"
-              : "text-white/70"
-          }`}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
-          >
-            <circle cx="11" cy="11" r="6" />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M16.5 16.5L21 21"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={handleOpponentToggleClick}
-          onDoubleClick={handleOpponentToggleDoubleClick}
-          disabled={!opponentToggleActive}
-          aria-disabled={!opponentToggleActive}
-          aria-pressed={showOpponentComparison}
-          aria-label={opponentToggleTitle}
-          title={opponentToggleTitle}
-          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition disabled:cursor-not-allowed ${
-            showOpponentComparison
-              ? "text-orange-300 shadow-[0_0_12px_rgba(251,146,60,0.7)]"
-              : opponentToggleActive
-              ? "text-orange-200 hover:bg-white/20"
-              : "text-white/50"
+          onClick={() => setActionsOpen((prev) => !prev)}
+          aria-expanded={actionsOpen}
+          aria-label="Outils"
+          title="Outils"
+          className={`w-9 h-9 rounded-full border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
+            actionsOpen
+              ? "bg-white/20 text-white shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+              : "bg-white/10 text-white/90 hover:bg-white/20"
           }`}
         >
           <svg
@@ -490,95 +623,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M4 20l6-2 8-8-4-4-8 8-2 6z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M14 6l4 4"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M3 21l3-3"
-            />
-          </svg>
-        </button>
-        <span className="h-6 w-[2px] bg-white/30" aria-hidden />
-        <button
-          type="button"
-          onClick={() => setCalendarOpen(true)}
-          aria-label="Calendrier des matchs"
-          title="Calendrier des matchs"
-          className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-            asOfDate
-              ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-              : "text-white/90 hover:bg-white/20"
-          }`}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
-          >
-            <rect x="3" y="5" width="18" height="16" rx="2" />
-            <path d="M8 3v4M16 3v4M3 9h18" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={toggleFavorite}
-          aria-pressed={isFavorite}
-          aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-          title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-          className="w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition flex items-center justify-center"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill={isFavorite ? "#facc15" : "none"}
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M11.48 3.5a.7.7 0 0 1 1.04 0l2.36 2.4c.2.2.46.32.74.35l3.33.5a.7.7 0 0 1 .39 1.2l-2.4 2.35a.7.7 0 0 0-.2.62l.58 3.3a.7.7 0 0 1-1.01.74l-2.98-1.56a.7.7 0 0 0-.65 0l-2.98 1.56a.7.7 0 0 1-1.01-.74l.58-3.3a.7.7 0 0 0-.2-.62L4.8 7.95a.7.7 0 0 1 .39-1.2l3.33-.5a.7.7 0 0 0 .74-.35l2.36-2.4Z"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={handleCopyClick}
-          onDoubleClick={handleCopyDoubleClick}
-          className={`w-9 h-9 rounded-full bg-white/15 border border-white/20 hover:bg-white/25 flex items-center justify-center backdrop-blur-sm transition ${
-            copied
-              ? "text-white shadow-[0_0_12px_rgba(255,255,255,0.6)]"
-              : "text-white/80 hover:text-white"
-          }`}
-          title={copyTitle}
-          aria-label={copyTitle}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8 3h7l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 3v4h4"
+              d="M21.7 19.3l-5.6-5.6a5 5 0 0 0-6.4-6.4l3.2 3.2-2.8 2.8-3.2-3.2a5 5 0 0 0 6.4 6.4l5.6 5.6a1 1 0 0 0 1.4-1.4z"
             />
           </svg>
         </button>
@@ -589,7 +634,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           onClick={handleResetDate}
           className="mb-4 w-full rounded-lg border border-red-500/70 bg-red-600/70 px-4 py-2 text-sm text-white hover:bg-red-600/80 transition"
         >
-          Stats du {bannerLabel} Â· Revenir a aujourd'hui
+          Stats du {bannerLabel} - Revenir a aujourd'hui
         </button>
       ) : null}
       {calendarOpen ? (
@@ -724,7 +769,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         <span className="font-semibold">{team.name}</span>
       </div>
 
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4 w-fit mb-6 text-white">
+      <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:items-center sm:gap-4 mx-auto mb-6 text-white text-center">
         {team.logo && (
           <img
             src={team.logo}
@@ -733,83 +778,48 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           />
         )}
 
-        <div>
+        <div className="flex flex-col items-center">
           <h1 className="text-3xl font-bold">{team.name}</h1>
-          {league && <p className="text-sm opacity-80 mt-1">{league.name} â€” Season 2025</p>}
+          {league && <p className="text-sm opacity-80 mt-1">{league.name} - Season 2025</p>}
         </div>
       </div>
 
-      <div className="flex flex-nowrap gap-3 mb-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 sm:flex-wrap sm:overflow-visible">
-        <button
-          onClick={() => setRange("season")}
-          className={`px-2 py-1 text-sm rounded snap-start whitespace-nowrap ${
-            range === "season"
-              ? "bg-green-600 text-white"
-              : "bg-white/20 text-white hover:bg-white/30"
-          }`}
-        >
-          Saison 2025
-        </button>
-
-        {[10, 20, 30, 40, 50].map((n) => (
-          <button
-            key={n}
-            onClick={() => setRange(n)}
-            className={`px-2 py-1 text-sm rounded snap-start whitespace-nowrap ${
-              range === n
-                ? "bg-green-600 text-white"
-                : "bg-white/20 text-white hover:bg-white/30"
-            }`}
-          >
-            {n} matchs
-          </button>
-        ))}
+      <div className="flex flex-nowrap gap-3 mb-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1 sm:flex-wrap sm:overflow-visible sm:justify-center">
+        {rangeOptions.map((value) => {
+          const isActive = value === range;
+          return (
+            <button
+              key={`range-${value}`}
+              type="button"
+              onClick={() => setRange(value)}
+              className={`px-3 py-1 text-sm rounded-lg snap-start whitespace-nowrap text-center min-w-[96px] transition ${
+                isActive
+                  ? "bg-green-600 text-white shadow-[0_0_12px_rgba(34,197,94,0.45)]"
+                  : "bg-white/10 text-white/60 blur-[0.8px] opacity-70 hover:bg-white/15"
+              }`}
+            >
+              {formatRangeLabel(value)}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex flex-nowrap gap-4 mb-6 border-b pb-2 overflow-x-auto no-scrollbar snap-x snap-mandatory sm:flex-wrap sm:overflow-visible">
-        <button
-          onClick={() => setTab("dashboard")}
-          className={
-            tab === "dashboard"
-              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
-              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
-          }
-        >
-          Charly IA
-        </button>
-
-        <button
-          onClick={() => setTab("stats")}
-          className={
-            tab === "stats"
-              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
-              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
-          }
-        >
-          Team Stats
-        </button>
-
-        <button
-          onClick={() => setTab("league")}
-          className={
-            tab === "league"
-              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
-              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
-          }
-        >
-          League Stats
-        </button>
-
-        <button
-          onClick={() => setTab("odds")}
-          className={
-            tab === "odds"
-              ? "pb-2 border-b-2 border-white font-semibold text-white snap-start whitespace-nowrap"
-              : "opacity-60 text-white/60 hover:text-white snap-start whitespace-nowrap"
-          }
-        >
-          Odds
-        </button>
+      <div className="flex flex-nowrap gap-4 mb-6 border-b pb-2 overflow-x-auto no-scrollbar snap-x snap-mandatory sm:flex-wrap sm:overflow-visible sm:justify-center">
+        {tabOptions.map((item) => {
+          const isActive = item.key === tab;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setTab(item.key)}
+              className={`px-2 pb-2 text-sm snap-start whitespace-nowrap text-center min-w-[110px] transition ${
+                isActive ? "font-semibold text-white" : "text-white/60 blur-[0.8px] opacity-70"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "dashboard" ? (
@@ -871,7 +881,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       <div className="mb-6 mt-6 p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded text-white">
         <h2 className="font-semibold mb-2">Debug fixtures</h2>
         <p className="text-xs opacity-70 text-white/70">
-          Matchs utilisÃ©s par le moteur : {stats?.played ?? 0}
+          Matchs utilises par le moteur : {stats?.played ?? 0}
         </p>
       </div>
     </div>
@@ -1063,16 +1073,19 @@ function DashboardView({
   if (!stats) return <p className="opacity-60">Aucune statistique disponible.</p>;
 
   const [showAllForm, setShowAllForm] = useState<boolean>(false);
+  const [mobileCarouselIndex, setMobileCarouselIndex] = useState(0);
+  const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
+  const mobileCarouselSlides = 2;
   const fixturesLimited = fixtures || [];
 
   const standingsTable = Array.isArray(standings) ? standings : [];
 
-  // Filtrer les fixtures valides (sÃ©curise contre undefined)
+  // Filtrer les fixtures valides (securise contre undefined)
   const validFixtures = fixturesLimited.filter(
     (f) => f?.fixture?.date
   );
 
-  // Trier avec fallback sÃ©curisÃ©
+  // Trier avec fallback securise
   const fixturesSorted = [...validFixtures].sort((a, b) => {
     const dateA = new Date(a.fixture.date).getTime();
     const dateB = new Date(b.fixture.date).getTime();
@@ -1091,6 +1104,9 @@ function DashboardView({
 
   // Premier match futur valide
   const computedNextMatch = nextMatch || futureMatches[0] || null;
+  const h2hHomeId = computedNextMatch?.teams?.home?.id ?? null;
+  const h2hAwayId = computedNextMatch?.teams?.away?.id ?? null;
+  const h2hLeagueId = computedNextMatch?.league?.id ?? league?.id ?? null;
   const formMatches = showAllForm ? fixturesLimited : fixturesLimited.slice(0, 5);
   const formLettersFull = fixturesLimited.map((f) => {
     const gf = f.isHome ? f.goals_home : f.goals_away;
@@ -1104,6 +1120,88 @@ function DashboardView({
   const playedMatches = stats.played ?? 0;
   const goalsFor = stats.goalsFor ?? 0;
   const goalsAgainst = stats.goalsAgainst ?? 0;
+
+  const handleMobileCarouselScroll = () => {
+    const el = mobileCarouselRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const nextIndex = Math.round(el.scrollLeft / el.clientWidth);
+    const bounded = Math.max(0, Math.min(mobileCarouselSlides - 1, nextIndex));
+    if (bounded !== mobileCarouselIndex) {
+      setMobileCarouselIndex(bounded);
+    }
+  };
+
+  const nextMatchCard = (
+    <div
+      className={`p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3 ${
+        calendarActive ? "ring-1 ring-red-500/70" : ""
+      }`}
+    >
+      <h2 className="text-lg font-semibold">Prochain match</h2>
+      {!computedNextMatch ? (
+        <p>Aucun prochain match.</p>
+      ) : (
+        <>
+          {/* Date + Heure + Journee */}
+          <div className="text-sm text-gray-300">
+            {format(new Date(computedNextMatch.fixture.date), "dd MMM yyyy")} -{" "}
+            {format(new Date(computedNextMatch.fixture.date), "HH:mm")}
+            {computedNextMatch.league.round ? (
+              <> - Journee {computedNextMatch.league.round.replace("Regular Season - ", "")}</>
+            ) : null}
+            {computedNextMatch.fixture?.id ? (
+              <span className="text-xs text-white/75 font-normal">
+                {" "}
+                ({computedNextMatch.fixture.id})
+              </span>
+            ) : null}
+          </div>
+
+          {/* Match Banner */}
+          <div className="flex items-center justify-between gap-3 w-full">
+            {/* Home */}
+            <div className="flex flex-col items-center flex-1 min-w-0">
+              <img
+                src={computedNextMatch.teams.home.logo}
+                alt={computedNextMatch.teams.home.name}
+                className="w-12 h-12"
+              />
+              <p className="mt-2 font-semibold">{computedNextMatch.teams.home.name}</p>
+            </div>
+
+            {/* Score or VS */}
+            <div className="flex flex-col items-center flex-1 min-w-0">
+              {computedNextMatch.fixture.status.short === "NS" ? (
+                <p className="text-lg font-bold">VS</p>
+              ) : (
+                <p className="text-lg font-bold">
+                  {computedNextMatch.goals.home} - {computedNextMatch.goals.away}
+                </p>
+              )}
+              <p className="text-xs text-gray-300">{computedNextMatch.league.name}</p>
+            </div>
+
+            {/* Away */}
+            <div className="flex flex-col items-center flex-1 min-w-0">
+              <img
+                src={computedNextMatch.teams.away.logo}
+                alt={computedNextMatch.teams.away.name}
+                className="w-12 h-12"
+              />
+              <p className="mt-2 font-semibold">{computedNextMatch.teams.away.name}</p>
+            </div>
+          </div>
+
+          {/* Stade */}
+          {computedNextMatch.fixture.venue?.name && (
+            <p className="text-xs text-gray-400 text-center mt-1">
+              Stade : {computedNextMatch.fixture.venue.name}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1121,25 +1219,14 @@ function DashboardView({
       />
 
       <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-        <h2 className="font-semibold text-lg mb-3">Classement</h2>
-        {standingsTable.length ? (
-          <div className="max-h-[420px] overflow-y-auto pr-2">
-            <StandingsList table={standingsTable} opponentByTeam={{}} />
-          </div>
-        ) : (
-          <p className="text-sm opacity-70">Classement indisponible.</p>
-        )}
-      </div>
-
-      <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-        <h2 className="font-semibold text-lg mb-3">RÃ©sumÃ©</h2>
+        <h2 className="font-semibold text-lg mb-3">Resume</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <Stat label="Matchs jouÃ©s" value={stats.played} />
+          <Stat label="Matchs joues" value={stats.played} />
           <Stat label="Victoires" value={stats.wins} />
           <Stat label="Nuls" value={stats.draws} />
-          <Stat label="DÃ©faites" value={stats.losses} />
+          <Stat label="Defaites" value={stats.losses} />
           <Stat
-            label="Buts marquÃ©s"
+            label="Buts marques"
             value={
               <>
                 {goalsFor}{" "}
@@ -1150,7 +1237,7 @@ function DashboardView({
             }
           />
           <Stat
-            label="Buts encaissÃ©s"
+            label="Buts encaisses"
             value={
               <>
                 {goalsAgainst}{" "}
@@ -1163,85 +1250,66 @@ function DashboardView({
         </div>
       </div>
 
-      <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-        <div className="flex flex-col gap-2 w-full">
-          <h2 className="text-lg font-semibold mb-2">Prochain match</h2>
-
-          {!computedNextMatch ? (
-            <p>Aucun prochain match.</p>
-          ) : (
-            <div
-              className={`p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col gap-3 ${
-                calendarActive ? "ring-1 ring-red-500/70" : ""
+      <div className="hidden md:block">
+        {nextMatchCard}
+      </div>
+      <div className="md:hidden space-y-2">
+        <div className="flex items-center justify-center gap-2" aria-hidden="true">
+          {Array.from({ length: mobileCarouselSlides }).map((_, idx) => (
+            <span
+              key={`match-dot-${idx}`}
+              className={`h-1.5 w-1.5 rounded-full ${
+                idx === mobileCarouselIndex ? "bg-blue-400" : "bg-white/30"
               }`}
-            >
-
-              {/* Date + Heure + JournÃ©e */}
-              <div className="text-sm text-gray-300">
-                {format(new Date(computedNextMatch.fixture.date), "dd MMM yyyy")} â€¢{" "}
-                {format(new Date(computedNextMatch.fixture.date), "HH:mm")}  
-                {computedNextMatch.league.round ? (
-                    <> â€¢ JournÃ©e {computedNextMatch.league.round.replace("Regular Season - ", "")}</>
-                ) : null}
-                {computedNextMatch.fixture?.id ? (
-                  <span className="text-xs text-white/75 font-normal">
-                    {" "}
-                    ({computedNextMatch.fixture.id})
-                  </span>
-                ) : null}
-              </div>
-
-              {/* Match Banner */}
-              <div className="flex items-center justify-between gap-3 w-full">
-
-                {/* Home */}
-                <div className="flex flex-col items-center flex-1 min-w-0">
-                    <img
-                        src={computedNextMatch.teams.home.logo}
-                        alt={computedNextMatch.teams.home.name}
-                        className="w-12 h-12"
-                    />
-                    <p className="mt-2 font-semibold">{computedNextMatch.teams.home.name}</p>
-                </div>
-
-                {/* Score or VS */}
-                <div className="flex flex-col items-center flex-1 min-w-0">
-                    {computedNextMatch.fixture.status.short === "NS" ? (
-                        <p className="text-lg font-bold">VS</p>
-                    ) : (
-                        <p className="text-lg font-bold">
-                            {computedNextMatch.goals.home} - {computedNextMatch.goals.away}
-                        </p>
-                    )}
-                    <p className="text-xs text-gray-300">{computedNextMatch.league.name}</p>
-                </div>
-
-                {/* Away */}
-                <div className="flex flex-col items-center flex-1 min-w-0">
-                    <img
-                        src={computedNextMatch.teams.away.logo}
-                        alt={computedNextMatch.teams.away.name}
-                        className="w-12 h-12"
-                    />
-                    <p className="mt-2 font-semibold">{computedNextMatch.teams.away.name}</p>
-                </div>
-              </div>
-
-              {/* Stade */}
-              {computedNextMatch.fixture.venue?.name && (
-                  <p className="text-xs text-gray-400 text-center mt-1">
-                    Stade : {computedNextMatch.fixture.venue.name}
-                  </p>
-              )}
-            </div>
-          )}
+            />
+          ))}
         </div>
+        <div
+          ref={mobileCarouselRef}
+          onScroll={handleMobileCarouselScroll}
+          className="flex flex-nowrap gap-6 overflow-x-auto no-scrollbar snap-x snap-mandatory"
+        >
+          <div className="snap-start shrink-0 w-full">
+            {nextMatchCard}
+          </div>
+          <div className="snap-start shrink-0 w-full">
+            <H2HCard
+              homeId={h2hHomeId}
+              awayId={h2hAwayId}
+              leagueId={h2hLeagueId}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+        <h2 className="font-semibold text-lg mb-3">Classement</h2>
+        {standingsTable.length ? (
+          <div className="max-h-[420px] overflow-y-auto pr-2">
+            <StandingsList
+              table={standingsTable}
+              opponentByTeam={{}}
+              focusTeamId={team?.id ?? null}
+              autoScroll={false}
+            />
+          </div>
+        ) : (
+          <p className="text-sm opacity-70">Classement indisponible.</p>
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <H2HCard
+          homeId={h2hHomeId}
+          awayId={h2hAwayId}
+          leagueId={h2hLeagueId}
+        />
       </div>
 
       <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/10 p-6 text-white md:col-span-2">
         <h2 className="text-xl font-semibold mb-4">Forme</h2>
 
-        {/* SÃ‰RIE */}
+        {/* SERIE */}
         <div className="text-sm font-bold mt-1 mb-3">
           {formLine.map((letter, idx) => {
             const isFirst = idx === 0;
@@ -1262,7 +1330,7 @@ function DashboardView({
           })}
         </div>
 
-        {/* LISTE DÃ‰TAILLÃ‰E DES MATCHS */}
+        {/* LISTE DETAILLEE DES MATCHS */}
         <div className="space-y-1">
           {formMatches.map((f: any, idx: number) => {
             const match = {
@@ -1315,12 +1383,185 @@ function DashboardView({
               onClick={() => setShowAllForm(!showAllForm)}
               className="text-white text-sm font-semibold hover:underline"
             >
-              {showAllForm ? "RÃ©duire" : "Voir plus"}
+              {showAllForm ? "Reduire" : "Voir plus"}
             </button>
           </div>
         )}
       </div>
 
+    </div>
+  );
+}
+
+type H2HFixture = {
+  fixture?: {
+    id?: number;
+    date?: string;
+  };
+  teams?: {
+    home?: { id?: number; name?: string; logo?: string };
+    away?: { id?: number; name?: string; logo?: string };
+  };
+  goals?: {
+    home?: number | null;
+    away?: number | null;
+  };
+  league?: {
+    season?: number;
+    round?: string;
+  };
+};
+
+function H2HCard({
+  homeId,
+  awayId,
+  leagueId,
+}: {
+  homeId: number | null;
+  awayId: number | null;
+  leagueId: number | null;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bySeason, setBySeason] = useState<Record<number, H2HFixture[]>>({});
+
+  useEffect(() => {
+    let active = true;
+    if (!homeId || !awayId || !leagueId) {
+      setBySeason({});
+      setError(null);
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    Promise.all(
+      H2H_SEASONS.map(async (season) => {
+        try {
+          const data = await fetchApi("fixtures/headtohead", {
+            h2h: `${homeId}-${awayId}`,
+            league: leagueId,
+            season,
+          });
+          return { season, matches: Array.isArray(data?.response) ? data.response : [] };
+        } catch (err: any) {
+          return { season, matches: [], error: err?.message ?? "Erreur H2H." };
+        }
+      })
+    )
+      .then((results) => {
+        if (!active) return;
+        const nextBySeason: Record<number, H2HFixture[]> = {};
+        let errorMessage: string | null = null;
+        results.forEach((result) => {
+          nextBySeason[result.season] = result.matches ?? [];
+          if (!errorMessage && result.error) {
+            errorMessage = result.error;
+          }
+        });
+        setBySeason(nextBySeason);
+        setError(errorMessage);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [homeId, awayId, leagueId]);
+
+  return (
+    <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="font-semibold text-lg">H2H</h2>
+          <p className="text-xs text-white/70">Saisons 2024 & 2025</p>
+        </div>
+      </div>
+
+      {!homeId || !awayId || !leagueId ? (
+        <p className="text-sm opacity-70">Aucun prochain match.</p>
+      ) : loading ? (
+        <p className="text-sm opacity-70">Chargement H2H...</p>
+      ) : (
+        <div className="space-y-4 max-h-[14rem] overflow-y-auto pr-2 no-scrollbar">
+          {H2H_SEASONS.map((season) => {
+            const matches = bySeason[season] ?? [];
+            const sortedMatches = [...matches].sort((a, b) => {
+              const dateA = a.fixture?.date ? new Date(a.fixture.date).getTime() : 0;
+              const dateB = b.fixture?.date ? new Date(b.fixture.date).getTime() : 0;
+              return dateB - dateA;
+            });
+            return (
+              <div key={`h2h-${season}`}>
+                <div className="text-xs text-white/60 font-semibold mb-2">
+                  Saison {season}
+                </div>
+                {sortedMatches.length === 0 ? (
+                  <p className="text-xs text-white/50">Aucun match H2H.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {sortedMatches.map((match, idx) => {
+                      const home = match.teams?.home;
+                      const away = match.teams?.away;
+                      const dateRaw = match.fixture?.date;
+                      const dateLabel = dateRaw
+                        ? format(new Date(dateRaw), "dd MMM yyyy")
+                        : "--";
+                      const score =
+                        match.goals?.home != null && match.goals?.away != null
+                          ? `${match.goals.home} - ${match.goals.away}`
+                          : "--";
+
+                      return (
+                        <div
+                          key={match.fixture?.id ?? `${season}-${idx}`}
+                          className="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-xs"
+                        >
+                          <div className="text-[10px] text-white/40 tabular-nums">
+                            {dateLabel}
+                          </div>
+                          <div className="flex items-center gap-2 min-w-0">
+                            {home?.logo ? (
+                              <img
+                                src={home.logo}
+                                alt={home.name ?? "Home"}
+                                className="w-4 h-4"
+                              />
+                            ) : null}
+                            <span className="truncate">{home?.name ?? "Home"}</span>
+                          </div>
+                          <div className="text-sm font-semibold tabular-nums text-white/80">
+                            {score}
+                          </div>
+                          <div className="flex items-center justify-end gap-2 min-w-0 text-right">
+                            <span className="truncate">{away?.name ?? "Away"}</span>
+                            {away?.logo ? (
+                              <img
+                                src={away.logo}
+                                alt={away.name ?? "Away"}
+                                className="w-4 h-4"
+                              />
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {error ? <p className="text-xs text-red-300 mt-2">{error}</p> : null}
     </div>
   );
 }
