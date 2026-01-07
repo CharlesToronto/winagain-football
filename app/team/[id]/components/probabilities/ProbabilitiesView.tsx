@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CardResultSimple from "./CardResultSimple";
 import CardOverUnder from "./CardOverUnder";
 import CardCorners from "./CardCorners";
@@ -11,6 +11,8 @@ import GoalsTotalTrendSection from "./GoalsTotalTrendSection";
 import GoalsScoredTrendSection from "./GoalsScoredTrendSection";
 import CardDoubleChance from "./CardDoubleChance";
 import CardOverUnderHomeAway from "./CardOverUnderHomeAway";
+import CardOverUnderTeam from "./CardOverUnderTeam";
+import CardOverUnderTeamHomeAway from "./CardOverUnderTeamHomeAway";
 import CardGoalsSplit from "./CardGoalsSplit";
 import AiPromptButton from "./AiPromptButton";
 
@@ -86,6 +88,7 @@ export default function ProbabilitiesView({
   const [mobileSummaryIndex, setMobileSummaryIndex] = useState(0);
   const mobileSummaryRef = useRef<HTMLDivElement | null>(null);
   const mobileSummarySlides = 2;
+  const [teamGoalsFocus, setTeamGoalsFocus] = useState<"for" | "against">("for");
 
   const { engines, computeStreaks } = getProbabilityEngines();
 
@@ -101,6 +104,16 @@ export default function ProbabilitiesView({
   const calendarActive = Boolean(cutoffDate);
   const cardBorderClass = calendarActive ? "rounded-xl border border-red-500/70" : "";
   const opponentComparisonActive = Boolean(showOpponentComparison);
+  const teamGoalsLabel = teamGoalsFocus === "for" ? "Buts marques" : "Buts encaisses";
+  const teamName = useMemo(() => {
+    const match = (fixtures ?? []).find(
+      (fixture) =>
+        typeof fixture?.isHome === "boolean" &&
+        (fixture?.home_team_name || fixture?.away_team_name)
+    );
+    if (!match) return null;
+    return match.isHome ? match.home_team_name ?? null : match.away_team_name ?? null;
+  }, [fixtures]);
 
   const handleSummaryScroll = () => {
     const el = mobileSummaryRef.current;
@@ -343,6 +356,53 @@ export default function ProbabilitiesView({
         onAiPrompt={handleAiPrompt}
         cardBorderClass={cardBorderClass}
       />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <AiPromptButton
+            onClick={() =>
+              handleAiPrompt(
+                "Over / Under equipe",
+                `${teamGoalsLabel} | Mode ${filter}`
+              )
+            }
+          />
+          <div className={cardBorderClass}>
+            <CardOverUnderTeam
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              showOpponentComparison={opponentComparisonActive}
+              teamName={teamName}
+              goalFocus={teamGoalsFocus}
+              onGoalFocusChange={setTeamGoalsFocus}
+              mode={filter}
+              highlightActive={overUnderHighlight}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <AiPromptButton
+            onClick={() =>
+              handleAiPrompt(
+                "Over / Under equipe (Home/Away)",
+                `${teamGoalsLabel} | Home/Away | Mode ${filter}`
+              )
+            }
+          />
+          <div className={cardBorderClass}>
+            <CardOverUnderTeamHomeAway
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              showOpponentComparison={opponentComparisonActive}
+              teamName={teamName}
+              goalFocus={teamGoalsFocus}
+              onGoalFocusChange={setTeamGoalsFocus}
+              mode={filter}
+              highlightActive={overUnderHighlight}
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="hidden">
         <div className={cardBorderClass}>

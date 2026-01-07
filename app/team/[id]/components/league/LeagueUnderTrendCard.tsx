@@ -50,6 +50,13 @@ export default function LeagueUnderTrendCard({
   const isThresholdControlled = typeof controlledThreshold === "number";
   const threshold =
     typeof controlledThreshold === "number" ? controlledThreshold : localThreshold;
+  const buttonBaseClass =
+    "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
+  const activeButtonClass = "bg-green-500/30 border-green-400 text-white";
+  const inactiveButtonClass = "bg-white/10 text-white/70";
+  const filterRowClass = `flex items-center gap-2 flex-nowrap pb-1 ${
+    isThresholdOpen ? "overflow-visible" : "overflow-x-auto no-scrollbar"
+  }`;
 
   const setThresholdValue = (value: number) => {
     if (onThresholdChange) onThresholdChange(value);
@@ -136,17 +143,19 @@ export default function LeagueUnderTrendCard({
 
   return (
     <div className="bg-white/5 rounded-xl p-6 shadow h-[20rem] flex flex-col">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts ligue (Under)</h3>
           <p className="text-xs text-white/70">Par round (FT)</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-white/70">
-          <span>Filtre under</span>
+        <div className={filterRowClass}>
+          <span className="text-[11px] text-white/70 whitespace-nowrap shrink-0">Filtre under</span>
           <div className="relative" ref={thresholdRef}>
             <button
               type="button"
-              className="px-3 py-1 rounded-md text-xs font-semibold bg-white/10 text-white border border-white/10 backdrop-blur-sm"
+              className={`${buttonBaseClass} ${
+                isThresholdOpen ? activeButtonClass : inactiveButtonClass
+              }`}
               onClick={() => setIsThresholdOpen((prev) => !prev)}
               aria-haspopup="listbox"
               aria-expanded={isThresholdOpen}

@@ -166,10 +166,12 @@ export default function LeagueRoundFixturesCard({
   const canPrev = activeIndex > 0;
   const canNext = activeIndex < rounds.length - 1;
   const currentTitle = currentRound ? resolveRoundTitle(currentRound.round) : "--";
+  const navButtonClass =
+    "w-7 h-7 rounded-md border border-white/60 bg-white/10 text-white transition disabled:opacity-40";
 
   return (
     <div className="bg-white/5 rounded-xl p-6 shadow min-h-[20rem] flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Matchs par round</h3>
           <p className="text-xs text-white/70 hidden sm:block">{currentTitle}</p>
@@ -177,7 +179,7 @@ export default function LeagueRoundFixturesCard({
         <div className="hidden sm:flex items-center gap-2">
           <button
             type="button"
-            className="w-8 h-8 rounded-full border border-white/10 bg-white/10 text-white disabled:opacity-40"
+            className={navButtonClass}
             onClick={() => setActiveIndex((prev) => Math.max(0, prev - 1))}
             disabled={!canPrev}
             aria-label="Round precedent"
@@ -188,7 +190,7 @@ export default function LeagueRoundFixturesCard({
           </button>
           <button
             type="button"
-            className="w-8 h-8 rounded-full border border-white/10 bg-white/10 text-white disabled:opacity-40"
+            className={navButtonClass}
             onClick={() =>
               setActiveIndex((prev) => Math.min(rounds.length - 1, prev + 1))
             }

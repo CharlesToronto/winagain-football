@@ -794,7 +794,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
               onClick={() => setRange(value)}
               className={`px-3 py-1 text-sm rounded-lg snap-start whitespace-nowrap text-center min-w-[96px] transition ${
                 isActive
-                  ? "bg-green-600 text-white shadow-[0_0_12px_rgba(34,197,94,0.45)]"
+                  ? "bg-green-600 text-white"
                   : "bg-white/10 text-white/60 blur-[0.8px] opacity-70 hover:bg-white/15"
               }`}
             >
@@ -1203,6 +1203,24 @@ function DashboardView({
     </div>
   );
 
+  const standingsCard = (
+    <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+      <h2 className="font-semibold text-lg mb-3">Classement</h2>
+      {standingsTable.length ? (
+        <div className="max-h-[420px] overflow-y-auto pr-2">
+          <StandingsList
+            table={standingsTable}
+            opponentByTeam={{}}
+            focusTeamId={team?.id ?? null}
+            autoScroll={false}
+          />
+        </div>
+      ) : (
+        <p className="text-sm opacity-70">Classement indisponible.</p>
+      )}
+    </div>
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -1250,8 +1268,16 @@ function DashboardView({
         </div>
       </div>
 
-      <div className="hidden md:block">
-        {nextMatchCard}
+      <div className="hidden md:grid md:col-span-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
+        <div className="flex flex-col gap-6">
+          {nextMatchCard}
+          <H2HCard
+            homeId={h2hHomeId}
+            awayId={h2hAwayId}
+            leagueId={h2hLeagueId}
+          />
+        </div>
+        {standingsCard}
       </div>
       <div className="md:hidden space-y-2">
         <div className="flex items-center justify-center gap-2" aria-hidden="true">
@@ -1282,28 +1308,8 @@ function DashboardView({
         </div>
       </div>
 
-      <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-        <h2 className="font-semibold text-lg mb-3">Classement</h2>
-        {standingsTable.length ? (
-          <div className="max-h-[420px] overflow-y-auto pr-2">
-            <StandingsList
-              table={standingsTable}
-              opponentByTeam={{}}
-              focusTeamId={team?.id ?? null}
-              autoScroll={false}
-            />
-          </div>
-        ) : (
-          <p className="text-sm opacity-70">Classement indisponible.</p>
-        )}
-      </div>
-
-      <div className="hidden md:block">
-        <H2HCard
-          homeId={h2hHomeId}
-          awayId={h2hAwayId}
-          leagueId={h2hLeagueId}
-        />
+      <div className="md:hidden">
+        {standingsCard}
       </div>
 
       <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/10 p-6 text-white md:col-span-2">

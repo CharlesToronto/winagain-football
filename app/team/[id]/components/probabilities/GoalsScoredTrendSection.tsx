@@ -88,7 +88,7 @@ function NextMatchBelowCard({
     : `Aucun match au-dessus de ${thresholdLabel}`;
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow flex flex-col gap-4 h-[20rem]">
+    <div className="bg-sky-400/10 backdrop-blur-sm rounded-xl p-6 shadow flex flex-col gap-4 h-[20rem]">
       <div>
         <h3 className="font-semibold">Match suivant sous {thresholdLabel}</h3>
         <p className="text-xs text-white/70">

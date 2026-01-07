@@ -236,17 +236,23 @@ export default function GoalsTrendCard({
     hoverIdx !== null && opponentSeries.points[hoverIdx]
       ? opponentSeries.points[hoverIdx]
       : null;
+  const buttonBaseClass =
+    "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
+  const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
+  const filterRowClass = `flex items-center gap-2 flex-nowrap pb-1 ${
+    isThresholdOpen ? "overflow-visible" : "overflow-x-auto no-scrollbar"
+  }`;
 
   return (
     <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2 flex flex-col md:h-[20rem]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts (total par match)</h3>
           <p className="text-xs text-white/70">Série de {total} match(s)</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 text-xs text-white/70">
-            <span>Nouvelle moyenne</span>
+        <div className={filterRowClass}>
+          <div className="flex items-center gap-2 text-xs text-white/70 shrink-0">
+            <span className="whitespace-nowrap">Nouvelle moyenne</span>
             <div className="relative" ref={thresholdRef}>
               <button
                 type="button"
@@ -288,10 +294,8 @@ export default function GoalsTrendCard({
           <button
             onClick={() => setShowOpponent((v) => !v)}
             disabled={!opponentFixtures || opponentFixtures.length === 0}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
-              showOpponent
-                ? "bg-orange-500 text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
+            className={`${buttonBaseClass} ${
+              showOpponent ? "bg-orange-500/30 border-orange-400 text-white" : inactiveButtonClass
             } ${
               !opponentFixtures || opponentFixtures.length === 0
                 ? "opacity-40 cursor-not-allowed"

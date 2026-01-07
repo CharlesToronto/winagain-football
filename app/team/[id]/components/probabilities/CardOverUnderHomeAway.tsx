@@ -62,18 +62,22 @@ export default function CardOverUnderHomeAway({
   });
   const shouldHighlight = (type: "over" | "under", key: string) =>
     Boolean(highlightActive && highlightKeys?.has(`${type}:${key}`));
+  const buttonBaseClass =
+    "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
+  const activeButtonClass = "bg-green-500/30 border-green-400 text-white";
+  const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
 
   return (
     <div className="bg-white/5 rounded-xl p-6 shadow group relative overflow-hidden h-[20rem]">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col gap-2 mb-3">
         <h3 className="font-semibold">Over / Under ({side === "home" ? "Home" : "Away"})</h3>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
           {(["home", "away"] as Side[]).map((s) => (
             <button
               key={s}
               onClick={() => setSide(s)}
-              className={`px-3 py-1 text-xs rounded-md ${
-                side === s ? "bg-green-600 text-white" : "bg-white/10 text-white"
+              className={`${buttonBaseClass} ${
+                side === s ? activeButtonClass : inactiveButtonClass
               }`}
             >
               {s === "home" ? "Home" : "Away"}
