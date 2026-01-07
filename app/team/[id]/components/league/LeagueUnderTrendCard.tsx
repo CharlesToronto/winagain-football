@@ -19,6 +19,12 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function formatNumber(value: number) {
+  if (!Number.isFinite(value)) return "--";
+  const rounded = Math.round(value * 10) / 10;
+  return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(1);
+}
+
 function extractRoundNumber(round?: string | null) {
   if (!round) return null;
   const match = round.match(/\d+/g);
@@ -110,6 +116,12 @@ export default function LeagueUnderTrendCard({
       return a.round.localeCompare(b.round);
     });
   }, [fixtures, threshold]);
+  const averageUnder = useMemo(() => {
+    if (!rounds.length) return null;
+    const sum = rounds.reduce((acc, round) => acc + round.countUnder, 0);
+    return sum / rounds.length;
+  }, [rounds]);
+  const averageLabel = averageUnder == null ? "--" : formatNumber(averageUnder);
 
   const totalSlots = rounds.length;
   const mobileSlots = 10;
@@ -146,7 +158,7 @@ export default function LeagueUnderTrendCard({
       <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts ligue (Under)</h3>
-          <p className="text-xs text-white/70">Par round (FT)</p>
+          <p className="text-xs text-white/70">Par round (FT) | Moyenne: {averageLabel}</p>
         </div>
         <div className={filterRowClass}>
           <span className="text-[11px] text-white/70 whitespace-nowrap shrink-0">Filtre under</span>

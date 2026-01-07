@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import GoalsScoredTrendCard, {
   buildEntries,
   type Location,
@@ -8,8 +8,10 @@ import GoalsScoredTrendCard, {
   type SeriesEntry,
 } from "./GoalsScoredTrendCard";
 import AiPromptButton from "./AiPromptButton";
+import ConfidenceBadgeTrigger from "./ConfidenceBadgeTrigger";
 
 type Fixture = any;
+type BadgeKey = "trendScored" | "matchScored";
 
 function formatNumber(value: number) {
   if (Number.isNaN(value)) return "--";
@@ -41,12 +43,11 @@ function computeNextMatchBelow(
     };
   }
 
-  const triggerFloor = Math.max(0, threshold - 0.5);
   let triggers = 0;
   let belowNext = 0;
   for (let i = 0; i < entries.length - 1; i++) {
     const currentValue = entries[i].value;
-    if (currentValue >= triggerFloor) {
+    if (currentValue > threshold) {
       triggers += 1;
       if (entries[i + 1].value < threshold) {
         belowNext += 1;
@@ -55,7 +56,7 @@ function computeNextMatchBelow(
   }
   const percent = triggers ? Math.round((belowNext / triggers) * 100) : 0;
   const lastValue = entries[entries.length - 1]?.value ?? null;
-  const lastAbove = lastValue !== null && lastValue >= triggerFloor;
+  const lastAbove = lastValue !== null && lastValue > threshold;
 
   return {
     lastValue,
@@ -141,6 +142,9 @@ export default function GoalsScoredTrendSection({
   mode = "FT",
   onAiPrompt,
   cardBorderClass = "",
+  onBadgeStateChange,
+  badgeActiveCount = 0,
+  badgeTotalCount = 0,
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
@@ -149,6 +153,9 @@ export default function GoalsScoredTrendSection({
   mode?: Mode;
   onAiPrompt?: (cardTitle: string, detail?: string) => void;
   cardBorderClass?: string;
+  onBadgeStateChange?: (key: BadgeKey, active: boolean) => void;
+  badgeActiveCount?: number;
+  badgeTotalCount?: number;
 }) {
   const [location, setLocation] = useState<Location>("all");
   const [threshold, setThreshold] = useState(1.5);
@@ -161,6 +168,27 @@ export default function GoalsScoredTrendSection({
     [fixtures, mode, location]
   );
   const teamName = useMemo(() => resolveTeamName(fixtures ?? []), [fixtures]);
+  const matchBelowSummary = useMemo(
+    () => computeNextMatchBelow(entries, threshold),
+    [entries, threshold]
+  );
+  const matchBelowIndicator =
+    matchBelowSummary.lastAbove &&
+    matchBelowSummary.triggers > 0 &&
+    matchBelowSummary.percent >= 70 &&
+    matchBelowSummary.percent <= 100;
+  const lastTeamGoals = entries.length ? entries[entries.length - 1].value : null;
+  const trendIndicatorActive = lastTeamGoals != null && lastTeamGoals > 2.5;
+
+  useEffect(() => {
+    if (!onBadgeStateChange) return;
+    onBadgeStateChange("trendScored", trendIndicatorActive);
+  }, [onBadgeStateChange, trendIndicatorActive]);
+
+  useEffect(() => {
+    if (!onBadgeStateChange) return;
+    onBadgeStateChange("matchScored", matchBelowIndicator);
+  }, [onBadgeStateChange, matchBelowIndicator]);
 
   const thresholdLabel = `+${formatNumber(threshold)}`;
   const locationLabel =
@@ -196,14 +224,21 @@ export default function GoalsScoredTrendSection({
         <div className="snap-start shrink-0 w-full md:w-auto md:col-span-2">
           <div className="space-y-2">
             {onAiPrompt ? (
-              <AiPromptButton
-                onClick={() =>
-                  onAiPrompt(
-                    "Tendance buts (Marqués)",
-                    `Buts Marqués | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
-                  )
-                }
-              />
+              <div className="flex items-center justify-between">
+                <AiPromptButton
+                  onClick={() =>
+                    onAiPrompt(
+                      "Tendance buts (MarquAcs)",
+                      `Buts MarquAcs | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                    )
+                  }
+                />
+                <ConfidenceBadgeTrigger
+                  activeCount={badgeActiveCount}
+                  totalCount={badgeTotalCount}
+                  visible={trendIndicatorActive}
+                />
+              </div>
             ) : null}
             <div className={cardBorderClass}>
               <GoalsScoredTrendCard
@@ -224,14 +259,21 @@ export default function GoalsScoredTrendSection({
         <div className="snap-start shrink-0 w-full md:w-auto md:col-span-1">
           <div className="space-y-2">
             {onAiPrompt ? (
-              <AiPromptButton
-                onClick={() =>
-                  onAiPrompt(
-                    `Match suivant sous ${thresholdLabel}`,
-                    `Buts Marqués | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
-                  )
-                }
-              />
+              <div className="flex items-center justify-between">
+                <AiPromptButton
+                  onClick={() =>
+                    onAiPrompt(
+                      `Match suivant sous ${thresholdLabel}`,
+                      `Buts Marqués | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                    )
+                  }
+                />
+                <ConfidenceBadgeTrigger
+                  activeCount={badgeActiveCount}
+                  totalCount={badgeTotalCount}
+                  visible={matchBelowIndicator}
+                />
+              </div>
             ) : null}
             <div className={cardBorderClass}>
               <NextMatchBelowCard entries={entries} threshold={threshold} teamName={teamName} />

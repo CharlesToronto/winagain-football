@@ -54,6 +54,44 @@ export async function getLeagueFixturesAllSeasons(leagueId: number) {
   return data;
 }
 
+export async function getFixturesForTeamsSeasons(
+  teamIds: number[],
+  seasons: number[],
+  leagueId?: number | null
+) {
+  if (!teamIds.length || !seasons.length) return [];
+  const idList = teamIds.join(",");
+  let query = supabase
+    .from("fixtures")
+    .select(`
+      id,
+      date_utc,
+      season,
+      competition_id,
+      status_short,
+      home_team_id,
+      away_team_id,
+      goals_home,
+      goals_away,
+      goals_home_ht,
+      goals_away_ht
+    `)
+    .or(`home_team_id.in.(${idList}),away_team_id.in.(${idList})`)
+    .in("season", seasons);
+
+  if (leagueId != null) {
+    query = query.eq("competition_id", leagueId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Supabase fixtures error:", error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
 export async function getLeagueFixturesBySeason(
   leagueId: number,
   season: number | string

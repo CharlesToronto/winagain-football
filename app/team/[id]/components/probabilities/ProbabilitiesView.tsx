@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CardResultSimple from "./CardResultSimple";
 import CardOverUnder from "./CardOverUnder";
 import CardCorners from "./CardCorners";
@@ -15,6 +15,7 @@ import CardOverUnderTeam from "./CardOverUnderTeam";
 import CardOverUnderTeamHomeAway from "./CardOverUnderTeamHomeAway";
 import CardGoalsSplit from "./CardGoalsSplit";
 import AiPromptButton from "./AiPromptButton";
+import ConfidenceBadgeTrigger from "./ConfidenceBadgeTrigger";
 
 import { getProbabilityEngines } from "@/lib/adapters/probabilities";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
@@ -26,6 +27,20 @@ type FilterKey = "FT" | "HT" | "2H";
 type RangeOption = number | "season";
 
 const CURRENT_SEASON = 2025;
+const BADGE_KEYS = [
+  "trendScored",
+  "matchScored",
+  "trendTotalTeam",
+  "trendTotalOpponent",
+  "matchTotal",
+  "overUnder",
+  "overUnderHomeAway",
+] as const;
+type BadgeKey = (typeof BADGE_KEYS)[number];
+const INITIAL_BADGE_STATE = BADGE_KEYS.reduce((acc, key) => {
+  acc[key] = false;
+  return acc;
+}, {} as Record<BadgeKey, boolean>);
 
 function selectOpponentFixtures(
   fixtures: Fixture[],
@@ -62,6 +77,7 @@ export default function ProbabilitiesView({
   teamId,
   nextOpponentId,
   nextOpponentName,
+  isTeamHome,
   range,
   cutoffDate,
   overUnderMatchKeys,
@@ -74,6 +90,7 @@ export default function ProbabilitiesView({
   teamId?: number | null;
   nextOpponentId?: number | null;
   nextOpponentName?: string | null;
+  isTeamHome?: boolean | null;
   range?: RangeOption;
   cutoffDate?: Date | null;
   overUnderMatchKeys?: Set<string>;
@@ -89,6 +106,19 @@ export default function ProbabilitiesView({
   const mobileSummaryRef = useRef<HTMLDivElement | null>(null);
   const mobileSummarySlides = 2;
   const [teamGoalsFocus, setTeamGoalsFocus] = useState<"for" | "against">("for");
+  const [badgeStates, setBadgeStates] =
+    useState<Record<BadgeKey, boolean>>(INITIAL_BADGE_STATE);
+  const totalBadgeCount = BADGE_KEYS.length;
+  const badgeActiveCount = useMemo(
+    () => Object.values(badgeStates).filter(Boolean).length,
+    [badgeStates]
+  );
+  const handleBadgeStateChange = useCallback((key: BadgeKey, active: boolean) => {
+    setBadgeStates((prev) => {
+      if (prev[key] === active) return prev;
+      return { ...prev, [key]: active };
+    });
+  }, []);
 
   const { engines, computeStreaks } = getProbabilityEngines();
 
@@ -114,7 +144,69 @@ export default function ProbabilitiesView({
     if (!match) return null;
     return match.isHome ? match.home_team_name ?? null : match.away_team_name ?? null;
   }, [fixtures]);
+  const opponentStatsForIndicator = useMemo(() => {
+    if (!opponentFixtures.length) return null;
+    return computeEngine(opponentFixtures ?? []);
+  }, [opponentFixtures, computeEngine]);
+  const resolvePercent = (value: any) => {
+    const percent =
+      typeof value?.percent === "number" ? value.percent : Number(value?.percent ?? NaN);
+    return Number.isFinite(percent) ? percent : null;
+  };
+  const isBetween70And99 = (percent: number | null) =>
+    percent != null && percent >= 70 && percent <= 99;
+  const teamUnder35 = resolvePercent(stats?.under?.["3.5"]);
+  const opponentUnder35 = resolvePercent(opponentStatsForIndicator?.under?.["3.5"]);
+  const overUnderIndicatorActive =
+    isBetween70And99(teamUnder35) && isBetween70And99(opponentUnder35);
+  const getUnderPercentBySide = (list: Fixture[], side: "home" | "away") => {
+    const totals = (list ?? [])
+      .filter((f) => {
+        if (f.goals_home == null || f.goals_away == null) return false;
+        if (side === "home") return f.isHome === true;
+        return f.isHome === false;
+      })
+      .map((f) => Number(f.goals_home ?? 0) + Number(f.goals_away ?? 0));
+    if (!totals.length) return null;
+    const underCount = totals.filter((total) => total <= 3.5).length;
+    return Math.round((underCount / totals.length) * 100);
+  };
+  const teamHomeUnder35 = useMemo(
+    () => getUnderPercentBySide(fixtures ?? [], "home"),
+    [fixtures]
+  );
+  const teamAwayUnder35 = useMemo(
+    () => getUnderPercentBySide(fixtures ?? [], "away"),
+    [fixtures]
+  );
+  const opponentHomeUnder35 = useMemo(
+    () => getUnderPercentBySide(opponentFixtures ?? [], "home"),
+    [opponentFixtures]
+  );
+  const opponentAwayUnder35 = useMemo(
+    () => getUnderPercentBySide(opponentFixtures ?? [], "away"),
+    [opponentFixtures]
+  );
+  const overUnderHomeAwayIndicatorActive = useMemo(() => {
+    if (isTeamHome == null) return false;
+    const homePercent = isTeamHome ? teamHomeUnder35 : opponentHomeUnder35;
+    const awayPercent = isTeamHome ? opponentAwayUnder35 : teamAwayUnder35;
+    return isBetween70And99(homePercent) && isBetween70And99(awayPercent);
+  }, [
+    isTeamHome,
+    teamHomeUnder35,
+    teamAwayUnder35,
+    opponentHomeUnder35,
+    opponentAwayUnder35,
+  ]);
 
+  useEffect(() => {
+    handleBadgeStateChange("overUnder", overUnderIndicatorActive);
+  }, [handleBadgeStateChange, overUnderIndicatorActive]);
+
+  useEffect(() => {
+    handleBadgeStateChange("overUnderHomeAway", overUnderHomeAwayIndicatorActive);
+  }, [handleBadgeStateChange, overUnderHomeAwayIndicatorActive]);
   const handleSummaryScroll = () => {
     const el = mobileSummaryRef.current;
     if (!el || el.clientWidth === 0) return;
@@ -318,11 +410,21 @@ export default function ProbabilitiesView({
         mode={filter}
         onAiPrompt={handleAiPrompt}
         cardBorderClass={cardBorderClass}
+        onBadgeStateChange={handleBadgeStateChange}
+        badgeActiveCount={badgeActiveCount}
+        badgeTotalCount={totalBadgeCount}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Over / Under")} />
+          <div className="flex items-center justify-between">
+            <AiPromptButton onClick={() => handleAiPrompt("Over / Under")} />
+            <ConfidenceBadgeTrigger
+              activeCount={badgeActiveCount}
+              totalCount={totalBadgeCount}
+              visible={overUnderIndicatorActive}
+            />
+          </div>
           <div className={cardBorderClass}>
             <CardOverUnder
               data={stats}
@@ -334,7 +436,14 @@ export default function ProbabilitiesView({
           </div>
         </div>
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Over / Under (Home/Away)")} />
+          <div className="flex items-center justify-between">
+            <AiPromptButton onClick={() => handleAiPrompt("Over / Under (Home/Away)")} />
+            <ConfidenceBadgeTrigger
+              activeCount={badgeActiveCount}
+              totalCount={totalBadgeCount}
+              visible={overUnderHomeAwayIndicatorActive}
+            />
+          </div>
           <div className={cardBorderClass}>
             <CardOverUnderHomeAway
               fixtures={fixtures ?? []}
@@ -355,6 +464,9 @@ export default function ProbabilitiesView({
         mode={filter}
         onAiPrompt={handleAiPrompt}
         cardBorderClass={cardBorderClass}
+        onBadgeStateChange={handleBadgeStateChange}
+        badgeActiveCount={badgeActiveCount}
+        badgeTotalCount={totalBadgeCount}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

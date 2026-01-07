@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import GoalsTrendCard, { getGoalsForMode, type Mode } from "./GoalsTrendCard";
 import AiPromptButton from "./AiPromptButton";
+import ConfidenceBadgeTrigger from "./ConfidenceBadgeTrigger";
 
 type Fixture = any;
+type BadgeKey = "matchTotal" | "trendTotalTeam" | "trendTotalOpponent";
 
 type SeriesEntry = {
   date: number;
@@ -52,12 +54,11 @@ function computeNextMatchBelow(entries: SeriesEntry[], threshold: number) {
     };
   }
 
-  const triggerFloor = Math.max(0, threshold - 0.5);
   let triggers = 0;
   let belowNext = 0;
   for (let i = 0; i < entries.length - 1; i++) {
     const currentValue = entries[i].value;
-    if (currentValue >= triggerFloor) {
+    if (currentValue > threshold) {
       triggers += 1;
       if (entries[i + 1].value < threshold) {
         belowNext += 1;
@@ -66,7 +67,7 @@ function computeNextMatchBelow(entries: SeriesEntry[], threshold: number) {
   }
   const percent = triggers ? Math.round((belowNext / triggers) * 100) : 0;
   const lastValue = entries[entries.length - 1]?.value ?? null;
-  const lastAbove = lastValue !== null && lastValue >= triggerFloor;
+  const lastAbove = lastValue !== null && lastValue > threshold;
 
   return {
     lastValue,
@@ -169,6 +170,9 @@ export default function GoalsTotalTrendSection({
   mode = "FT",
   onAiPrompt,
   cardBorderClass = "",
+  onBadgeStateChange,
+  badgeActiveCount = 0,
+  badgeTotalCount = 0,
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
@@ -177,13 +181,50 @@ export default function GoalsTotalTrendSection({
   mode?: Mode;
   onAiPrompt?: (cardTitle: string, detail?: string) => void;
   cardBorderClass?: string;
+  onBadgeStateChange?: (key: BadgeKey, active: boolean) => void;
+  badgeActiveCount?: number;
+  badgeTotalCount?: number;
 }) {
   const [threshold, setThreshold] = useState(3.5);
   const [mobileIndex, setMobileIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileSlides = 2;
   const entries = useMemo(() => buildEntries(fixtures ?? [], mode), [fixtures, mode]);
+  const opponentEntries = useMemo(
+    () => buildEntries(opponentFixtures ?? [], mode),
+    [opponentFixtures, mode]
+  );
+  const matchBelowSummary = useMemo(
+    () => computeNextMatchBelow(entries, threshold),
+    [entries, threshold]
+  );
+  const matchBelowIndicator =
+    matchBelowSummary.lastAbove &&
+    matchBelowSummary.triggers > 0 &&
+    matchBelowSummary.percent >= 70 &&
+    matchBelowSummary.percent <= 100;
   const thresholdLabel = `+${formatNumber(threshold)}`;
+  const lastTeamTotal = entries.length ? entries[entries.length - 1].value : null;
+  const lastOpponentTotal = opponentEntries.length
+    ? opponentEntries[opponentEntries.length - 1].value
+    : null;
+  const teamIndicatorActive = lastTeamTotal != null && lastTeamTotal > 3.5;
+  const opponentIndicatorActive = lastOpponentTotal != null && lastOpponentTotal > 3.5;
+
+  useEffect(() => {
+    if (!onBadgeStateChange) return;
+    onBadgeStateChange("matchTotal", matchBelowIndicator);
+  }, [onBadgeStateChange, matchBelowIndicator]);
+
+  useEffect(() => {
+    if (!onBadgeStateChange) return;
+    onBadgeStateChange("trendTotalTeam", teamIndicatorActive);
+  }, [onBadgeStateChange, teamIndicatorActive]);
+
+  useEffect(() => {
+    if (!onBadgeStateChange) return;
+    onBadgeStateChange("trendTotalOpponent", opponentIndicatorActive);
+  }, [onBadgeStateChange, opponentIndicatorActive]);
 
   const handleCarouselScroll = () => {
     const el = carouselRef.current;
@@ -215,14 +256,21 @@ export default function GoalsTotalTrendSection({
         <div className="order-2 md:order-1 snap-start shrink-0 w-full md:w-auto md:col-span-1">
           <div className="space-y-2">
             {onAiPrompt ? (
-              <AiPromptButton
-                onClick={() =>
-                  onAiPrompt(
-                    `Match suivant sous ${thresholdLabel}`,
-                    `Total buts | Seuil ${thresholdLabel}`
-                  )
-                }
-              />
+              <div className="flex items-center justify-between">
+                <AiPromptButton
+                  onClick={() =>
+                    onAiPrompt(
+                      `Match suivant sous ${thresholdLabel}`,
+                      `Total buts | Seuil ${thresholdLabel}`
+                    )
+                  }
+                />
+                <ConfidenceBadgeTrigger
+                  activeCount={badgeActiveCount}
+                  totalCount={badgeTotalCount}
+                  visible={matchBelowIndicator}
+                />
+              </div>
             ) : null}
             <div className={cardBorderClass}>
               <NextMatchBelowTotalCard entries={entries} threshold={threshold} />
@@ -232,14 +280,30 @@ export default function GoalsTotalTrendSection({
         <div className="order-1 md:order-2 snap-start shrink-0 w-full md:w-auto md:col-span-2">
           <div className="space-y-2">
             {onAiPrompt ? (
-              <AiPromptButton
-                onClick={() =>
-                  onAiPrompt(
-                    "Tendance buts (total par match)",
-                    `Total buts | Seuil ${thresholdLabel}`
-                  )
-                }
-              />
+              <div className="flex items-center justify-between">
+                <AiPromptButton
+                  onClick={() =>
+                    onAiPrompt(
+                      "Tendance buts (total par match)",
+                      `Total buts | Seuil ${thresholdLabel}`
+                    )
+                  }
+                />
+                {teamIndicatorActive || opponentIndicatorActive ? (
+                  <div className="flex items-center gap-1">
+                    <ConfidenceBadgeTrigger
+                      activeCount={badgeActiveCount}
+                      totalCount={badgeTotalCount}
+                      visible={teamIndicatorActive}
+                    />
+                    <ConfidenceBadgeTrigger
+                      activeCount={badgeActiveCount}
+                      totalCount={badgeTotalCount}
+                      visible={opponentIndicatorActive}
+                    />
+                  </div>
+                ) : null}
+              </div>
             ) : null}
             <div className={cardBorderClass}>
               <GoalsTrendCard

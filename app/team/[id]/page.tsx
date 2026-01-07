@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 import ProbabilitiesView from "./components/probabilities/ProbabilitiesView";
 import OddsView from "./components/odds/OddsView";
+import ConfidenceView from "./components/confidence/ConfidenceView";
 import TeamAiAnalysis from "./components/TeamAiAnalysis";
 import LeagueStatsView from "./components/league/LeagueStatsView";
 import OddsConverter from "@/app/home/components/OddsConverter";
@@ -49,7 +50,9 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     return new Date(asOfDate.getTime() - 24 * 60 * 60 * 1000);
   }, [asOfDate]);
 
-  const [tab, setTab] = useState<"dashboard" | "stats" | "odds" | "converter" | "league">("dashboard");
+  const [tab, setTab] = useState<
+    "dashboard" | "stats" | "odds" | "confidence" | "converter" | "league"
+  >("dashboard");
   const [probabilityFilter, setProbabilityFilter] = useState<"FT" | "HT" | "2H">("FT");
   const [team, setTeam] = useState<TeamData>(null);
   const [league, setLeague] = useState<LeagueData>(null);
@@ -80,6 +83,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     { key: "stats", label: "Team Stats" },
     { key: "league", label: "League Stats" },
     { key: "odds", label: "Odds" },
+    { key: "confidence", label: "Confiance" },
   ] as const;
   const formatRangeLabel = (value: RangeOption) =>
     value === "season" ? "Saison 2025" : `${value} matchs`;
@@ -127,6 +131,10 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const nextOpponentId = getNextOpponentId(effectiveNextMatch, teamId);
   const nextOpponentName = getNextOpponentName(effectiveNextMatch, teamId);
   const calendarActive = Boolean(asOfDate);
+  const isTeamHome =
+    Number.isFinite(teamId) && effectiveNextMatch?.teams?.home?.id != null
+      ? effectiveNextMatch.teams.home.id === teamId
+      : null;
 
   useEffect(() => {
     try {
@@ -164,6 +172,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
       setTab("dashboard");
     } else if (tabParam === "odds") {
       setTab("odds");
+    } else if (tabParam === "confidence") {
+      setTab("confidence");
     } else if (tabParam === "converter") {
       setTab("converter");
     } else if (tabParam === "league") {
@@ -841,6 +851,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         <ProbabilitiesView
           fixtures={fixtures}
           teamId={teamId}
+          isTeamHome={isTeamHome}
           range={effectiveRange}
           cutoffDate={cutoffDate}
           nextOpponentId={nextOpponentId}
@@ -857,14 +868,17 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           nextOpponentId={nextOpponentId}
           leagueId={league?.id ?? null}
           season={league?.season ?? CURRENT_SEASON}
-          isTeamHome={
-            Number.isFinite(teamId) && effectiveNextMatch?.teams?.home?.id != null
-              ? effectiveNextMatch.teams.home.id === teamId
-              : null
-          }
+          isTeamHome={isTeamHome}
           range={effectiveRange}
           cutoffDate={cutoffDate}
           filter={probabilityFilter}
+        />
+      ) : tab === "confidence" ? (
+        <ConfidenceView
+          fixtures={calendarFixtures.length ? calendarFixtures : fixtures}
+          teamId={teamId}
+          leagueId={leagueIdForStats}
+          range={effectiveRange}
         />
       ) : tab === "league" ? (
         <LeagueStatsView
