@@ -51,25 +51,50 @@ export async function loadTeamData(
   const apiTeam = teamData?.response?.[0];
   const team = apiTeam?.team ?? null;
 
-  // Prochain match via API Football
+  const allFixtures = await getTeamFixturesAllSeasons(id);
+  const leagueIdFromFixtures = resolveLeagueIdFromFixtures(
+    allFixtures,
+    STANDINGS_SEASON
+  );
+  const leagueFromApi = apiTeam?.league ?? null;
+  const preferredLeagueId = leagueIdFromFixtures ?? leagueFromApi?.id ?? null;
+
+  // Prochain match via API Football (prefere le championnat principal)
   let nextMatch = null;
   if (apiTeam?.team?.id) {
     try {
-      const nextData = await fetchApi("fixtures", { team: apiTeam.team.id, next: 1 });
-      nextMatch = nextData?.response?.[0] ?? null;
+      const nextData = await fetchApi("fixtures", { team: apiTeam.team.id, next: 5 });
+      const candidates = nextData?.response ?? [];
+      const preferred =
+        preferredLeagueId != null
+          ? candidates.find(
+              (fixture: any) =>
+                Number(fixture?.league?.id) === Number(preferredLeagueId)
+            )
+          : null;
+      nextMatch = preferred ?? candidates[0] ?? null;
     } catch (error) {
       nextMatch = null;
     }
   }
 
-  const allFixtures = await getTeamFixturesAllSeasons(id);
-  const leagueFromApi = apiTeam?.league ?? null;
   const leagueFromNext = nextMatch?.league ?? null;
-  const league = leagueFromApi ?? leagueFromNext ?? null;
   const leagueId =
-    leagueFromApi?.id ??
-    leagueFromNext?.id ??
-    resolveLeagueIdFromFixtures(allFixtures, STANDINGS_SEASON);
+    leagueIdFromFixtures ?? leagueFromApi?.id ?? leagueFromNext?.id ?? null;
+
+  let league = null;
+  if (leagueFromApi && Number(leagueFromApi.id) === Number(leagueId)) {
+    league = leagueFromApi;
+  } else if (leagueFromNext && Number(leagueFromNext.id) === Number(leagueId)) {
+    league = leagueFromNext;
+  } else if (leagueId != null) {
+    try {
+      const leagueData = await fetchApi("leagues", { id: leagueId });
+      league = leagueData?.response?.[0]?.league ?? leagueData?.response?.[0] ?? null;
+    } catch (error) {
+      league = null;
+    }
+  }
 
   // Fetch standings after resolving league
   let standings: any[] = [];

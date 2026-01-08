@@ -120,6 +120,7 @@ function buildTeamFixtureMap(
 
     const homeId = Number(fixture.home_team_id);
     const awayId = Number(fixture.away_team_id);
+    if (!Number.isFinite(homeId) || !Number.isFinite(awayId)) continue;
     const goalsHome = Number(fixture.goals_home);
     const goalsAway = Number(fixture.goals_away);
     const competitionId =
@@ -208,8 +209,14 @@ export default function ConfidenceView({
         if (fixture.competition_id == null) continue;
         if (Number(fixture.competition_id) !== Number(leagueId)) continue;
       }
-      if (fixture.home_team_id != null) ids.add(Number(fixture.home_team_id));
-      if (fixture.away_team_id != null) ids.add(Number(fixture.away_team_id));
+      if (fixture.home_team_id != null) {
+        const homeId = Number(fixture.home_team_id);
+        if (Number.isFinite(homeId)) ids.add(homeId);
+      }
+      if (fixture.away_team_id != null) {
+        const awayId = Number(fixture.away_team_id);
+        if (Number.isFinite(awayId)) ids.add(awayId);
+      }
     }
     return Array.from(ids);
   }, [fixtures, seasons, leagueId]);

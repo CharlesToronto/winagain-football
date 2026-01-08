@@ -9,7 +9,6 @@ type Fixture = {
   round_text?: string | null;
 };
 
-const MAX_COUNT = 10;
 const THEME_GREEN = "#2dd4bf";
 const THEME_GREEN_SOFT = "rgba(45, 212, 191, 0.15)";
 const THEME_PINK = "#ff4fd8";
@@ -124,6 +123,11 @@ export default function LeagueUnderTrendCard({
   const averageLabel = averageUnder == null ? "--" : formatNumber(averageUnder);
 
   const totalSlots = rounds.length;
+  const maxCount = useMemo(() => {
+    if (!rounds.length) return 1;
+    const maxValue = rounds.reduce((max, round) => Math.max(max, round.total), 0);
+    return maxValue > 0 ? maxValue : 1;
+  }, [rounds]);
   const mobileSlots = 10;
   const chartWidthPct =
     totalSlots > mobileSlots ? (totalSlots / mobileSlots) * 100 : 100;
@@ -136,8 +140,8 @@ export default function LeagueUnderTrendCard({
   const barWidth = Math.max(0.8, slotWidth * 0.65);
 
   const bars = rounds.map((entry, idx) => {
-    const value = clamp(entry.countUnder, 0, MAX_COUNT);
-    const height = (value / MAX_COUNT) * viewHeight;
+    const value = clamp(entry.countUnder, 0, maxCount);
+    const height = (value / maxCount) * viewHeight;
     const x = idx * slotWidth + (slotWidth - barWidth) / 2;
     const y = viewHeight - height;
     return {
@@ -226,9 +230,9 @@ export default function LeagueUnderTrendCard({
               </linearGradient>
             </defs>
 
-            {Array.from({ length: MAX_COUNT }).map((_, idx) => {
+            {Array.from({ length: maxCount }).map((_, idx) => {
               const label = idx + 1;
-              const y = viewHeight - (label / MAX_COUNT) * viewHeight;
+              const y = viewHeight - (label / maxCount) * viewHeight;
               return (
                 <g key={`grid-${idx}`}>
                   <line
@@ -271,7 +275,7 @@ export default function LeagueUnderTrendCard({
                   >
                     <div className="font-semibold">{hovered.round}</div>
                     <div>
-                      Under -{threshold}: {hovered.value}/{MAX_COUNT}
+                      Under -{threshold}: {hovered.value}/{hovered.total}
                     </div>
                     <div className="text-white/70">Matchs: {hovered.total}</div>
                   </div>
@@ -293,7 +297,7 @@ export default function LeagueUnderTrendCard({
                       className="flex flex-col items-center leading-tight tabular-nums"
                     >
                       <span className="text-[10px] text-white/55 font-semibold">
-                        {bar.value}/{MAX_COUNT}
+                        {bar.total ? `${bar.value}/${bar.total}` : "--"}
                       </span>
                       <span className="text-[11px] text-white/80 font-semibold">
                         {labelText}

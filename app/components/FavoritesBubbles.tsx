@@ -57,7 +57,7 @@ export default function FavoritesBubbles() {
   if (favorites.length === 0) return null;
 
   return (
-    <div className="fixed top-20 right-4 z-50 flex items-center gap-2 md:top-auto md:bottom-6 md:right-6 mobile-fab">
+    <div className="fixed top-4 left-4 z-50 flex flex-col items-start gap-2 md:top-6 md:left-6 mobile-fab">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -85,7 +85,7 @@ export default function FavoritesBubbles() {
       </button>
 
       {open ? (
-        <div className="flex flex-col items-center gap-2 md:flex-row">
+        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center">
           {favorites.map((fav) => (
             <Link
               key={fav.id}

@@ -260,9 +260,14 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   );
   const leagueIdForStats = useMemo(() => {
     if (league?.id != null) return Number(league.id);
+    const fromCalendar = resolveLeagueIdFromFixtures(
+      calendarFixtures,
+      CURRENT_SEASON
+    );
+    if (fromCalendar != null) return fromCalendar;
     const fallback = fixtures?.[0]?.competition_id ?? null;
     return fallback != null ? Number(fallback) : null;
-  }, [league?.id, fixtures]);
+  }, [league?.id, calendarFixtures, fixtures]);
   const opponentStats = useMemo(
     () => (opponentFixtures?.length ? computeFT(opponentFixtures) : null),
     [opponentFixtures]
@@ -931,6 +936,32 @@ function selectFixturesForRange(
   return played.slice(0, selectedCount);
 }
 
+function resolveLeagueIdFromFixtures(fixtures: FixtureItem[] = [], season: number) {
+  if (!Array.isArray(fixtures) || fixtures.length === 0) return null;
+  const seasonMatches = fixtures.filter(
+    (fixture) => Number(fixture?.season) === season
+  );
+  const candidates = seasonMatches.length ? seasonMatches : fixtures;
+  const counts = new Map<number, number>();
+  candidates.forEach((fixture) => {
+    const rawId = fixture?.competition_id;
+    const id = Number(rawId);
+    if (!Number.isFinite(id)) return;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  });
+
+  let bestId: number | null = null;
+  let bestCount = 0;
+  counts.forEach((count, id) => {
+    if (count > bestCount) {
+      bestCount = count;
+      bestId = id;
+    }
+  });
+
+  return bestId;
+}
+
 function getFixtureTimestamp(fixture: FixtureItem) {
   const raw =
     fixture?.date_utc ?? fixture?.date ?? fixture?.fixture?.date ?? fixture?.timestamp ?? null;
@@ -1120,7 +1151,7 @@ function DashboardView({
   const computedNextMatch = nextMatch || futureMatches[0] || null;
   const h2hHomeId = computedNextMatch?.teams?.home?.id ?? null;
   const h2hAwayId = computedNextMatch?.teams?.away?.id ?? null;
-  const h2hLeagueId = computedNextMatch?.league?.id ?? league?.id ?? null;
+  const h2hLeagueId = league?.id ?? computedNextMatch?.league?.id ?? null;
   const formMatches = showAllForm ? fixturesLimited : fixturesLimited.slice(0, 5);
   const formLettersFull = fixturesLimited.map((f) => {
     const gf = f.isHome ? f.goals_home : f.goals_away;
