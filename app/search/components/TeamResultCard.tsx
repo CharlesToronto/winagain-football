@@ -21,6 +21,14 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
       <div className="text-sm text-white/80">
         <div>Dernier match : {new Date(team.lastMatchDate).toLocaleString("fr-FR")}</div>
         <div>Adversaire : {team.opponent}</div>
+        {team.nextMatchDate ? (
+          <div>
+            Prochain match : {new Date(team.nextMatchDate).toLocaleString("fr-FR")}{team.nextOpponent ? ` vs ${team.nextOpponent}` : ""}
+          </div>
+        ) : null}
+        {team.badgeCount != null ? (
+          <div>Badges prochain match : {team.badgeCount}/7</div>
+        ) : null}
         <div>Marchés : {formatMarket(team.market)}</div>
         {team.nextMatchBelow?.line != null && team.nextMatchBelow?.percent != null ? (
           <div>

@@ -9,15 +9,12 @@ type Fixture = any;
 type Side = "home" | "away";
 
 const THRESHOLDS = ["0.5", "1.5", "2.5", "3.5", "4.5", "5.5"];
-const HIGHLIGHT_HIGH_MIN = 75;
+const HIGHLIGHT_HIGH_MIN = 70;
 const HIGHLIGHT_HIGH_MAX = 99;
-const HIGHLIGHT_LOW_MIN = 1;
-const HIGHLIGHT_LOW_MAX = 25;
 
 function getBand(percent: number) {
   if (!Number.isFinite(percent)) return null;
   if (percent >= HIGHLIGHT_HIGH_MIN && percent <= HIGHLIGHT_HIGH_MAX) return "high";
-  if (percent >= HIGHLIGHT_LOW_MIN && percent <= HIGHLIGHT_LOW_MAX) return "low";
   return null;
 }
 

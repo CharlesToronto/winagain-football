@@ -13,6 +13,17 @@ import ConfidenceBadgeTrigger from "./ConfidenceBadgeTrigger";
 type Fixture = any;
 type BadgeKey = "trendScored" | "matchScored";
 
+const THRESHOLD_MIN = 0.5;
+const THRESHOLD_MAX = 5.5;
+const DEFAULT_THRESHOLD = 1.5;
+
+function resolveDefaultThreshold(value: number | null, fallback: number) {
+  if (!Number.isFinite(value ?? NaN)) return fallback;
+  const adjusted = (value as number) - 0.5;
+  const clamped = Math.min(THRESHOLD_MAX, Math.max(THRESHOLD_MIN, adjusted));
+  return Math.round(clamped * 2) / 2;
+}
+
 function formatNumber(value: number) {
   if (Number.isNaN(value)) return "--";
   const rounded = Math.round(value * 100) / 100;
@@ -158,7 +169,7 @@ export default function GoalsScoredTrendSection({
   badgeTotalCount?: number;
 }) {
   const [location, setLocation] = useState<Location>("all");
-  const [threshold, setThreshold] = useState(1.5);
+  const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
   const [mobileIndex, setMobileIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileSlides = 2;
@@ -167,6 +178,20 @@ export default function GoalsScoredTrendSection({
     () => buildEntries(fixtures ?? [], mode, location),
     [fixtures, mode, location]
   );
+  const defaultThreshold = useMemo(() => {
+    const lastValue = entries.length ? entries[entries.length - 1].value : null;
+    return resolveDefaultThreshold(lastValue, DEFAULT_THRESHOLD);
+  }, [entries]);
+  const defaultThresholdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prevDefault = defaultThresholdRef.current;
+    if (prevDefault == null || threshold === prevDefault) {
+      if (threshold !== defaultThreshold) {
+        setThreshold(defaultThreshold);
+      }
+    }
+    defaultThresholdRef.current = defaultThreshold;
+  }, [defaultThreshold, threshold]);
   const teamName = useMemo(() => resolveTeamName(fixtures ?? []), [fixtures]);
   const matchBelowSummary = useMemo(
     () => computeNextMatchBelow(entries, threshold),

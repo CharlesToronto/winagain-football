@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Card from "@/app/components/ui/Card";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { IconSearch } from "@/app/components/icons";
 import { COMPETITION_IDS_BY_COUNTRY } from "@/app/lib/data/competitionIds";
 
 // TOP 5 major leagues
@@ -93,7 +93,7 @@ export default function LeaguesPage() {
       {/* SEARCH BAR */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-3 h-5 w-5 text-white/70" />
+          <IconSearch className="absolute left-3 top-3 h-5 w-5 text-white/70" />
           <input
             type="text"
             placeholder="Rechercher une ligue..."

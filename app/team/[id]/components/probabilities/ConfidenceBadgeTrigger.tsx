@@ -43,7 +43,7 @@ export default function ConfidenceBadgeTrigger({
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-white/10 bg-white/5 text-emerald-300"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-white/10 bg-white/5 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.6)] ring-1 ring-emerald-400/30"
       >
         <svg
           viewBox="0 0 24 24"

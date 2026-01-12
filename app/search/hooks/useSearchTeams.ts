@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { SearchFilters, TeamResult } from "../types";
 
 const DEFAULT_FILTERS: SearchFilters = {
+  leagueId: undefined,
   factType: "none",
   overUnderDirection: "OVER",
   overUnderLine: 2.5,
@@ -9,6 +10,7 @@ const DEFAULT_FILTERS: SearchFilters = {
   streakMin: 1,
   nextMatchBelowEnabled: false,
   nextMatchBelowLine: 1.5,
+  badgeTarget: undefined,
 };
 
 export function useSearchTeams(initial: SearchFilters = DEFAULT_FILTERS) {

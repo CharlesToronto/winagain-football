@@ -34,9 +34,13 @@ export type TeamResult = {
   probBlue: number;
   aboveAverage?: boolean;
   nextMatchBelow?: NextMatchBelowMeta;
+  nextMatchDate?: string;
+  nextOpponent?: string;
+  badgeCount?: number;
 };
 
 export type SearchFilters = {
+  leagueId?: number;
   factType?: FactType;
   overUnderDirection?: OverUnderDirection;
   overUnderLine?: number;
@@ -45,6 +49,7 @@ export type SearchFilters = {
   nextMatchBelowEnabled?: boolean;
   nextMatchBelowLine?: number;
   nextMatchBelowMinPercent?: number;
+  badgeTarget?: number;
 };
 
 export type NextMatchBelowMeta = {

@@ -12,7 +12,8 @@ type Fixture = {
 const THEME_GREEN = "#2dd4bf";
 const THEME_GREEN_SOFT = "rgba(45, 212, 191, 0.15)";
 const THEME_PINK = "#ff4fd8";
-const UNDER_OPTIONS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
+const THRESHOLD_OPTIONS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
+type TrendDirection = "under" | "over";
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -51,6 +52,7 @@ export default function LeagueUnderTrendCard({
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [localThreshold, setLocalThreshold] = useState(3.5);
   const [isThresholdOpen, setIsThresholdOpen] = useState(false);
+  const [direction, setDirection] = useState<TrendDirection>("under");
   const thresholdRef = useRef<HTMLDivElement | null>(null);
   const isThresholdControlled = typeof controlledThreshold === "number";
   const threshold =
@@ -62,6 +64,7 @@ export default function LeagueUnderTrendCard({
   const filterRowClass = `flex items-center gap-2 flex-nowrap pb-1 ${
     isThresholdOpen ? "overflow-visible" : "overflow-x-auto no-scrollbar"
   }`;
+  const signedThresholdLabel = `${direction === "under" ? "-" : "+"}${threshold}`;
 
   const setThresholdValue = (value: number) => {
     if (onThresholdChange) onThresholdChange(value);
@@ -92,16 +95,17 @@ export default function LeagueUnderTrendCard({
       const totalGoals =
         Number(fixture.goals_home ?? 0) + Number(fixture.goals_away ?? 0);
       const isUnder = totalGoals < threshold;
+      const isMatch = direction === "under" ? isUnder : totalGoals > threshold;
       const existing = groups.get(roundLabel);
       if (existing) {
         existing.total += 1;
-        if (isUnder) existing.countUnder += 1;
+        if (isMatch) existing.countUnder += 1;
       } else {
         groups.set(roundLabel, {
           round: roundLabel,
           order,
           total: 1,
-          countUnder: isUnder ? 1 : 0,
+          countUnder: isMatch ? 1 : 0,
         });
       }
     }
@@ -114,7 +118,7 @@ export default function LeagueUnderTrendCard({
       if (a.order == null && b.order != null) return 1;
       return a.round.localeCompare(b.round);
     });
-  }, [fixtures, threshold]);
+  }, [fixtures, threshold, direction]);
   const averageUnder = useMemo(() => {
     if (!rounds.length) return null;
     const sum = rounds.reduce((acc, round) => acc + round.countUnder, 0);
@@ -161,11 +165,31 @@ export default function LeagueUnderTrendCard({
     <div className="bg-white/5 rounded-xl p-6 shadow h-[20rem] flex flex-col">
       <div className="flex flex-col gap-2 mb-4">
         <div>
-          <h3 className="font-semibold">Tendance buts ligue (Under)</h3>
+          <h3 className="font-semibold">Tendance buts ligue</h3>
           <p className="text-xs text-white/70">Par round (FT) | Moyenne: {averageLabel}</p>
         </div>
         <div className={filterRowClass}>
-          <span className="text-[11px] text-white/70 whitespace-nowrap shrink-0">Filtre under</span>
+          <span className="text-[11px] text-white/70 whitespace-nowrap shrink-0">Filtre</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              className={`${buttonBaseClass} ${
+                direction === "under" ? activeButtonClass : inactiveButtonClass
+              }`}
+              onClick={() => setDirection("under")}
+            >
+              Under
+            </button>
+            <button
+              type="button"
+              className={`${buttonBaseClass} ${
+                direction === "over" ? activeButtonClass : inactiveButtonClass
+              }`}
+              onClick={() => setDirection("over")}
+            >
+              Over
+            </button>
+          </div>
           <div className="relative" ref={thresholdRef}>
             <button
               type="button"
@@ -177,7 +201,7 @@ export default function LeagueUnderTrendCard({
               aria-expanded={isThresholdOpen}
               aria-label="Filtre under"
             >
-              -{threshold}
+              {signedThresholdLabel}
             </button>
             {isThresholdOpen && (
               <div
@@ -185,7 +209,7 @@ export default function LeagueUnderTrendCard({
                 role="listbox"
                 aria-label="Filtre under"
               >
-                {UNDER_OPTIONS.map((value) => (
+                {THRESHOLD_OPTIONS.map((value) => (
                   <button
                     key={value}
                     type="button"
@@ -199,7 +223,7 @@ export default function LeagueUnderTrendCard({
                       setIsThresholdOpen(false);
                     }}
                   >
-                    -{value}
+                    {direction === "under" ? `-${value}` : `+${value}`}
                   </button>
                 ))}
               </div>
@@ -275,7 +299,8 @@ export default function LeagueUnderTrendCard({
                   >
                     <div className="font-semibold">{hovered.round}</div>
                     <div>
-                      Under -{threshold}: {hovered.value}/{hovered.total}
+                      {direction === "under" ? "Under" : "Over"} {signedThresholdLabel}:{" "}
+                      {hovered.value}/{hovered.total}
                     </div>
                     <div className="text-white/70">Matchs: {hovered.total}</div>
                   </div>

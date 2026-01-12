@@ -68,7 +68,7 @@ export default function CardOverUnderHomeAway({
   const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow group relative overflow-hidden h-[20rem]">
+    <div className="bg-white/5 rounded-xl p-6 shadow relative overflow-hidden h-[20rem]">
       <div className="flex flex-col gap-2 mb-3">
         <h3 className="font-semibold">Over / Under ({side === "home" ? "Home" : "Away"})</h3>
         <div className="flex items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
@@ -85,7 +85,7 @@ export default function CardOverUnderHomeAway({
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 filter blur-sm group-hover:blur-0 transition">
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <StatRow label="+0.5" count={`(${val(over["0.5"]).raw}/${total})`} percentGreen={`${val(over["0.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["0.5"]).percent}%` : undefined} percentBlue="–" highlight={shouldHighlight("over", "0.5")} />
           <StatRow label="+1.5" count={`(${val(over["1.5"]).raw}/${total})`} percentGreen={`${val(over["1.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["1.5"]).percent}%` : undefined} percentBlue="–" highlight={shouldHighlight("over", "1.5")} />

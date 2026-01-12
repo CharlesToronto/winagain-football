@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getFixturesForTeamsSeasons } from "@/lib/queries/fixtures";
+import { getFixturesForTeamsSeasons, getLeagueFixturesAllSeasons } from "@/lib/queries/fixtures";
 
 type RangeOption = number | "season";
 type SeasonFilter = "all" | "2024" | "2025";
+type ScopeFilter = "team" | "league";
+
+type TeamRef = {
+  id?: number | null;
+  name?: string | null;
+  logo?: string | null;
+};
 
 type Fixture = {
   id: number;
   date_utc: string | null;
   season: number | string | null;
   competition_id?: number | null;
+  teams?: TeamRef | null;
+  opp?: TeamRef | null;
   home_team_id: number | null;
   away_team_id: number | null;
   goals_home: number | null;
@@ -20,25 +29,44 @@ type FixtureInput = Partial<Fixture> & Record<string, any>;
 
 type TeamFixture = {
   id: number;
+  dateRaw: string | null;
   dateValue: number;
   season: number;
   competitionId: number | null;
   isHome: boolean;
   opponentId: number;
+  homeName: string;
+  awayName: string;
+  homeLogo: string | null;
+  awayLogo: string | null;
   goalsHome: number;
   goalsAway: number;
+};
+
+type BadgeMatch = {
+  id: number;
+  dateValue: number;
+  dateLabel: string;
+  homeName: string;
+  awayName: string;
+  homeLogo: string | null;
+  awayLogo: string | null;
+  scoreLabel: string;
+  isSuccess: boolean;
 };
 
 type BadgeBucket = {
   badgeCount: number;
   total: number;
   success: number;
+  matches: BadgeMatch[];
 };
 
 const SEASON_OPTIONS = [2024, 2025] as const;
 const TOTAL_BADGES = 7;
 const SCORED_THRESHOLD = 1.5;
 const TOTAL_THRESHOLD = 3.5;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function parseSeason(value: number | string | null) {
   const parsed = Number(value);
@@ -92,10 +120,28 @@ function isBetween70And99(value: number | null) {
   return value != null && value >= 70 && value <= 99;
 }
 
+function isBetween68And99(value: number | null) {
+  return value != null && value >= 68 && value <= 99;
+}
+
 function rangeLabel(range?: RangeOption) {
   if (typeof range === "number") return `${range} matchs`;
   if (range === "season") return "tous les matchs";
   return "tous les matchs";
+}
+
+function formatMatchDate(value: number) {
+  return new Date(value).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function normalizeTeamRef(value: any): TeamRef | null {
+  if (!value) return null;
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value;
 }
 
 function buildTeamFixtureMap(
@@ -113,7 +159,8 @@ function buildTeamFixtureMap(
       if (fixture.competition_id == null) continue;
       if (Number(fixture.competition_id) !== Number(leagueId)) continue;
     }
-    const dateValue = getDateValue(fixture.date_utc);
+    const dateRaw = fixture.date_utc ?? null;
+    const dateValue = getDateValue(dateRaw);
     if (dateValue == null) continue;
     if (fixture.goals_home == null || fixture.goals_away == null) continue;
     if (fixture.home_team_id == null || fixture.away_team_id == null) continue;
@@ -125,24 +172,38 @@ function buildTeamFixtureMap(
     const goalsAway = Number(fixture.goals_away);
     const competitionId =
       fixture.competition_id != null ? Number(fixture.competition_id) : null;
+    const homeName = fixture.teams?.name ?? fixture.home_team_name ?? "Home";
+    const awayName = fixture.opp?.name ?? fixture.away_team_name ?? "Away";
+    const homeLogo = fixture.teams?.logo ?? fixture.home_team_logo ?? null;
+    const awayLogo = fixture.opp?.logo ?? fixture.away_team_logo ?? null;
 
     const homeEntry: TeamFixture = {
       id: fixture.id,
+      dateRaw,
       dateValue,
       season,
       competitionId,
       isHome: true,
       opponentId: awayId,
+      homeName,
+      awayName,
+      homeLogo,
+      awayLogo,
       goalsHome,
       goalsAway,
     };
     const awayEntry: TeamFixture = {
       id: fixture.id,
+      dateRaw,
       dateValue,
       season,
       competitionId,
       isHome: false,
       opponentId: homeId,
+      homeName,
+      awayName,
+      homeLogo,
+      awayLogo,
       goalsHome,
       goalsAway,
     };
@@ -173,6 +234,7 @@ function makeBuckets() {
     badgeCount: idx + 1,
     total: 0,
     success: 0,
+    matches: [],
   }));
 }
 
@@ -181,15 +243,19 @@ export default function ConfidenceView({
   teamId,
   leagueId,
   range,
+  asOfDate,
 }: {
   fixtures: FixtureInput[];
   teamId?: number | null;
   leagueId?: number | null;
   range?: RangeOption;
+  asOfDate?: Date | null;
 }) {
   const [seasonFilter, setSeasonFilter] = useState<SeasonFilter>("all");
+  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("team");
   const [allFixtures, setAllFixtures] = useState<FixtureInput[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeBadgeCount, setActiveBadgeCount] = useState<number | null>(null);
 
   const seasons = useMemo(
     () =>
@@ -198,6 +264,12 @@ export default function ConfidenceView({
         : [Number(seasonFilter)],
     [seasonFilter]
   );
+  const fetchSeasons = [...SEASON_OPTIONS];
+  const asOfTime = useMemo(() => {
+    if (!asOfDate) return null;
+    const time = asOfDate.getTime();
+    return Number.isFinite(time) ? time : null;
+  }, [asOfDate]);
 
   const teamIds = useMemo(() => {
     const ids = new Set<number>();
@@ -224,13 +296,31 @@ export default function ConfidenceView({
   useEffect(() => {
     let active = true;
     async function loadFixtures() {
+      if (scopeFilter === "league") {
+        if (leagueId == null) {
+          setAllFixtures([]);
+          setLoading(false);
+          return;
+        }
+        setLoading(true);
+        const data = await getLeagueFixturesAllSeasons(Number(leagueId));
+        if (!active) return;
+        const normalized = (data ?? []).map((item: any) => ({
+          ...item,
+          teams: normalizeTeamRef(item.teams),
+          opp: normalizeTeamRef(item.opp),
+        }));
+        setAllFixtures(normalized);
+        setLoading(false);
+        return;
+      }
       if (!teamIds.length) {
         setAllFixtures([]);
         setLoading(false);
         return;
       }
       setLoading(true);
-      const data = await getFixturesForTeamsSeasons(teamIds, seasons, leagueId);
+      const data = await getFixturesForTeamsSeasons(teamIds, fetchSeasons, leagueId);
       if (!active) return;
       setAllFixtures(data ?? []);
       setLoading(false);
@@ -239,93 +329,172 @@ export default function ConfidenceView({
     return () => {
       active = false;
     };
-  }, [teamIds, seasons, leagueId]);
+  }, [teamIds, fetchSeasons, leagueId, scopeFilter]);
+
+  useEffect(() => {
+    setActiveBadgeCount(null);
+  }, [scopeFilter, seasonFilter, range]);
 
   const analysis = useMemo(() => {
     const buckets = makeBuckets();
     const summary = {
       totalMatches: 0,
       usedMatches: 0,
+      overallTotal: 0,
+      overallSuccess: 0,
       buckets,
     };
 
-    if (!Number.isFinite(teamId)) return summary;
     if (!allFixtures.length) return summary;
 
-    const fixturesByTeam = buildTeamFixtureMap(allFixtures, seasons, leagueId);
-    const teamList = fixturesByTeam.get(Number(teamId)) ?? [];
-    if (!teamList.length) return summary;
+    const fixturesByTeam = buildTeamFixtureMap(allFixtures, fetchSeasons, leagueId);
+    if (!fixturesByTeam.size) return summary;
+    const scopeTeamIds =
+      scopeFilter === "league"
+        ? Array.from(fixturesByTeam.keys())
+        : Number.isFinite(teamId)
+          ? [Number(teamId)]
+          : [];
+    if (!scopeTeamIds.length) return summary;
 
     const limit = typeof range === "number" ? range : null;
-    summary.totalMatches = teamList.length;
 
-    for (const match of teamList) {
-      const opponentId = match.opponentId;
-      const opponentList = fixturesByTeam.get(opponentId) ?? [];
-      const teamHistory = sliceHistory(teamList, match.dateValue, limit);
-      const oppHistory = sliceHistory(opponentList, match.dateValue, limit);
+    for (const scopeTeamId of scopeTeamIds) {
+      const teamList = fixturesByTeam.get(Number(scopeTeamId)) ?? [];
+      if (!teamList.length) continue;
+      if (teamList.length < 20) continue;
 
-      const teamScoredValues = teamHistory.map(getGoalsScored);
-      const teamTotalValues = teamHistory.map(getGoalsTotal);
-      const oppTotalValues = oppHistory.map(getGoalsTotal);
+      const seasonFilteredList =
+        seasonFilter === "all"
+          ? teamList
+          : teamList.filter((match) => match.season === Number(seasonFilter));
+      const dateFilteredList =
+        asOfTime != null
+          ? seasonFilteredList.filter((match) => match.dateValue <= asOfTime)
+          : seasonFilteredList;
+      if (!dateFilteredList.length) continue;
 
-      const lastScored = teamScoredValues.length
-        ? teamScoredValues[teamScoredValues.length - 1]
-        : null;
-      const lastTotalTeam = teamTotalValues.length
-        ? teamTotalValues[teamTotalValues.length - 1]
-        : null;
-      const lastTotalOpp = oppTotalValues.length
-        ? oppTotalValues[oppTotalValues.length - 1]
-        : null;
+      summary.totalMatches += dateFilteredList.length;
 
-      const scoredNext = computeNextMatchBelow(teamScoredValues, SCORED_THRESHOLD);
-      const totalNext = computeNextMatchBelow(teamTotalValues, TOTAL_THRESHOLD);
+      for (const match of dateFilteredList) {
+        const opponentId = match.opponentId;
+        const opponentList = fixturesByTeam.get(opponentId) ?? [];
+        if (opponentList.length < 20) continue;
+        const historyCutoffValue = match.dateValue - DAY_MS;
+        const teamHistory = sliceHistory(teamList, historyCutoffValue, limit);
+        const oppHistory = sliceHistory(opponentList, historyCutoffValue, limit);
 
-      const teamUnderPercent = percentUnder(teamTotalValues, TOTAL_THRESHOLD);
-      const oppUnderPercent = percentUnder(oppTotalValues, TOTAL_THRESHOLD);
+        const teamScoredValues = teamHistory.map(getGoalsScored);
+        const teamTotalValues = teamHistory.map(getGoalsTotal);
+        const oppTotalValues = oppHistory.map(getGoalsTotal);
 
-      const homeHistory = teamHistory.filter((entry) => entry.isHome);
-      const awayHistory = teamHistory.filter((entry) => !entry.isHome);
-      const oppHomeHistory = oppHistory.filter((entry) => entry.isHome);
-      const oppAwayHistory = oppHistory.filter((entry) => !entry.isHome);
+        const lastScored = teamScoredValues.length
+          ? teamScoredValues[teamScoredValues.length - 1]
+          : null;
+        const lastTotalTeam = teamTotalValues.length
+          ? teamTotalValues[teamTotalValues.length - 1]
+          : null;
+        const lastTotalOpp = oppTotalValues.length
+          ? oppTotalValues[oppTotalValues.length - 1]
+          : null;
 
-      const homePercent = match.isHome
-        ? percentUnder(homeHistory.map(getGoalsTotal), TOTAL_THRESHOLD)
-        : percentUnder(oppHomeHistory.map(getGoalsTotal), TOTAL_THRESHOLD);
-      const awayPercent = match.isHome
-        ? percentUnder(oppAwayHistory.map(getGoalsTotal), TOTAL_THRESHOLD)
-        : percentUnder(awayHistory.map(getGoalsTotal), TOTAL_THRESHOLD);
+        const scoredNext = computeNextMatchBelow(teamScoredValues, SCORED_THRESHOLD);
+        const totalNext = computeNextMatchBelow(teamTotalValues, TOTAL_THRESHOLD);
 
-      const badges = [
-        lastScored != null && lastScored > 2.5,
-        scoredNext.lastAbove && scoredNext.triggers > 0 && scoredNext.percent >= 70,
-        totalNext.lastAbove && totalNext.triggers > 0 && totalNext.percent >= 70,
-        lastTotalTeam != null && lastTotalTeam > TOTAL_THRESHOLD,
-        lastTotalOpp != null && lastTotalOpp > TOTAL_THRESHOLD,
-        isBetween70And99(teamUnderPercent) && isBetween70And99(oppUnderPercent),
-        isBetween70And99(homePercent) && isBetween70And99(awayPercent),
-      ];
+        const teamUnderPercent = percentUnder(teamTotalValues, TOTAL_THRESHOLD);
+        const oppUnderPercent = percentUnder(oppTotalValues, TOTAL_THRESHOLD);
+        const overUnderIndicatorActive =
+          isBetween68And99(teamUnderPercent) || isBetween68And99(oppUnderPercent);
+        if (!overUnderIndicatorActive) continue;
 
-      const badgeCount = badges.filter(Boolean).length;
-      if (badgeCount < 1 || badgeCount > TOTAL_BADGES) continue;
+        const homeHistory = teamHistory.filter((entry) => entry.isHome);
+        const awayHistory = teamHistory.filter((entry) => !entry.isHome);
+        const oppHomeHistory = oppHistory.filter((entry) => entry.isHome);
+        const oppAwayHistory = oppHistory.filter((entry) => !entry.isHome);
 
-      const matchTotal = getGoalsTotal(match);
-      const underResult = matchTotal <= TOTAL_THRESHOLD;
+        const homePercent = match.isHome
+          ? percentUnder(homeHistory.map(getGoalsTotal), TOTAL_THRESHOLD)
+          : percentUnder(oppHomeHistory.map(getGoalsTotal), TOTAL_THRESHOLD);
+        const awayPercent = match.isHome
+          ? percentUnder(oppAwayHistory.map(getGoalsTotal), TOTAL_THRESHOLD)
+          : percentUnder(awayHistory.map(getGoalsTotal), TOTAL_THRESHOLD);
 
-      const bucket = buckets.find((item) => item.badgeCount === badgeCount);
-      if (!bucket) continue;
-      bucket.total += 1;
-      if (underResult) bucket.success += 1;
-      summary.usedMatches += 1;
+        const badges = [
+          lastScored != null && lastScored > 2.5,
+          scoredNext.lastAbove && scoredNext.triggers > 0 && scoredNext.percent >= 70,
+          totalNext.lastAbove && totalNext.triggers > 0 && totalNext.percent >= 70,
+          lastTotalTeam != null && lastTotalTeam > TOTAL_THRESHOLD,
+          lastTotalOpp != null && lastTotalOpp > TOTAL_THRESHOLD,
+          isBetween70And99(teamUnderPercent) && isBetween70And99(oppUnderPercent),
+          isBetween70And99(homePercent) && isBetween70And99(awayPercent),
+        ];
+
+        const badgeCount = badges.filter(Boolean).length;
+        if (badgeCount < 1 || badgeCount > TOTAL_BADGES) continue;
+
+        const matchTotal = getGoalsTotal(match);
+        const underResult = matchTotal <= TOTAL_THRESHOLD;
+
+        const bucket = buckets.find((item) => item.badgeCount === badgeCount);
+        if (!bucket) continue;
+        bucket.total += 1;
+        if (underResult) bucket.success += 1;
+        bucket.matches.push({
+          id: match.id,
+          dateValue: match.dateValue,
+          dateLabel: formatMatchDate(match.dateValue),
+          homeName: match.homeName,
+          awayName: match.awayName,
+          homeLogo: match.homeLogo,
+          awayLogo: match.awayLogo,
+          scoreLabel: `${match.goalsHome} - ${match.goalsAway}`,
+          isSuccess: underResult,
+        });
+        summary.overallTotal += 1;
+        if (underResult) summary.overallSuccess += 1;
+        summary.usedMatches += 1;
+      }
+    }
+
+    for (const bucket of buckets) {
+      bucket.matches.sort((a, b) => b.dateValue - a.dateValue);
     }
 
     return summary;
-  }, [allFixtures, teamId, seasons, leagueId, range]);
+  }, [allFixtures, teamId, seasons, leagueId, range, scopeFilter, asOfTime, seasonFilter]);
+
+  const activeBucket =
+    activeBadgeCount != null
+      ? analysis.buckets.find((bucket) => bucket.badgeCount === activeBadgeCount) ??
+        null
+      : null;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setScopeFilter("team")}
+          className={`px-3 py-1 text-sm rounded-lg transition ${
+            scopeFilter === "team"
+              ? "bg-green-600 text-white"
+              : "bg-white/10 text-white/60 hover:bg-white/15"
+          }`}
+        >
+          Equipe
+        </button>
+        <button
+          type="button"
+          onClick={() => setScopeFilter("league")}
+          disabled={leagueId == null}
+          className={`px-3 py-1 text-sm rounded-lg transition ${
+            scopeFilter === "league"
+              ? "bg-green-600 text-white"
+              : "bg-white/10 text-white/60 hover:bg-white/15"
+          } ${leagueId == null ? "opacity-40 cursor-not-allowed" : ""}`}
+        >
+          Ligue
+        </button>
         <button
           type="button"
           onClick={() => setSeasonFilter("all")}
@@ -364,8 +533,8 @@ export default function ConfidenceView({
       <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
         <div className="font-semibold">Calibration badges (under 3.5)</div>
         <div className="text-xs text-white/70 mt-1">
-          Mode FT | Filtre historique: {rangeLabel(range)} | Badges actifs sur{" "}
-          {TOTAL_BADGES}
+          {scopeFilter === "league" ? "Scope ligue" : "Scope equipe"} | Mode FT | Filtre
+          historique: {rangeLabel(range)} | Badges actifs sur {TOTAL_BADGES}
         </div>
         <div className="text-xs text-white/70 mt-1">
           Matchs utilises: {analysis.usedMatches} / {analysis.totalMatches}
@@ -382,14 +551,32 @@ export default function ConfidenceView({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+            <div className="text-sm text-white/70">Moyenne badges (1-7)</div>
+            <div className="text-3xl font-semibold mt-2">
+              {analysis.overallTotal
+                ? `${Math.round(
+                    (analysis.overallSuccess / analysis.overallTotal) * 100
+                  )}%`
+                : "--"}
+            </div>
+            <div className="text-xs text-white/70 mt-2">
+              Under 3.5:{" "}
+              {analysis.overallTotal
+                ? `${analysis.overallSuccess}/${analysis.overallTotal}`
+                : "--"}
+            </div>
+          </div>
           {analysis.buckets.map((bucket) => {
             const percent = bucket.total
               ? Math.round((bucket.success / bucket.total) * 100)
               : null;
             return (
-              <div
+              <button
                 key={`badge-${bucket.badgeCount}`}
-                className="p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white"
+                type="button"
+                onClick={() => setActiveBadgeCount(bucket.badgeCount)}
+                className="p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white text-left transition hover:bg-white/15"
               >
                 <div className="text-sm text-white/70">
                   Badge {bucket.badgeCount}/{TOTAL_BADGES}
@@ -400,11 +587,96 @@ export default function ConfidenceView({
                 <div className="text-xs text-white/70 mt-2">
                   Under 3.5: {bucket.total ? `${bucket.success}/${bucket.total}` : "--"}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       )}
+
+      {activeBucket ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            aria-label="Fermer la liste des matchs"
+            onClick={() => setActiveBadgeCount(null)}
+          />
+          <div className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl border border-white/20 bg-white/10 backdrop-blur-lg shadow-xl text-white">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <div>
+                <div className="text-sm text-white/70">
+                  Badge {activeBucket.badgeCount}/{TOTAL_BADGES}
+                </div>
+                <div className="text-lg font-semibold">
+                  Detail des matchs (Under 3.5)
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-white/70">
+                  {activeBucket.total
+                    ? `${activeBucket.success}/${activeBucket.total}`
+                    : "--"}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveBadgeCount(null)}
+                  className="rounded-md bg-white/10 px-3 py-1 text-xs text-white/80 hover:bg-white/20"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
+              {activeBucket.matches.length === 0 ? (
+                <div className="text-sm text-white/70">Aucun match disponible.</div>
+              ) : (
+                <div className="space-y-3">
+                  {activeBucket.matches.map((match) => (
+                    <div
+                      key={match.id}
+                      className={`rounded-xl border px-4 py-3 backdrop-blur-sm ${
+                        match.isSuccess
+                          ? "border-emerald-400/40 bg-emerald-500/10"
+                          : "border-red-400/40 bg-red-500/10"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            {match.homeLogo ? (
+                              <img
+                                src={match.homeLogo}
+                                alt={match.homeName}
+                                className="w-6 h-6 object-contain"
+                              />
+                            ) : null}
+                            <span className="text-sm font-semibold">{match.homeName}</span>
+                          </div>
+                          <span className="text-xs text-white/60">vs</span>
+                          <div className="flex items-center gap-2">
+                            {match.awayLogo ? (
+                              <img
+                                src={match.awayLogo}
+                                alt={match.awayName}
+                                className="w-6 h-6 object-contain"
+                              />
+                            ) : null}
+                            <span className="text-sm font-semibold">{match.awayName}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-white/70">{match.dateLabel}</span>
+                          <span className="text-sm font-semibold">{match.scoreLabel}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

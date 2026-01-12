@@ -8,6 +8,10 @@ type Filters = Partial<SearchFilters>;
 
 const CURRENT_SEASON = 2025;
 const TEAM_CHUNK_SIZE = 500;
+const TOTAL_BADGES = 7;
+const SCORED_THRESHOLD = 1.5;
+const TOTAL_THRESHOLD = 3.5;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type NextMatchBelowSummary = {
   lastValue: number | null;
@@ -15,6 +19,24 @@ type NextMatchBelowSummary = {
   triggers: number;
   belowNext: number;
   percent: number;
+};
+
+type TeamFixture = {
+  id: number;
+  date_utc: string;
+  dateValue: number;
+  isHome: boolean;
+  home_team_id: number;
+  away_team_id: number;
+  goals_home: number;
+  goals_away: number;
+};
+
+type NextFixture = {
+  id: number;
+  dateValue: number;
+  isHome: boolean;
+  opponentId: number;
 };
 
 function chunkArray<T>(items: T[], size: number) {
@@ -104,6 +126,65 @@ function resolveMarket(filters: SearchFilters): MarketType {
   }
 
   return "OVER_2_5";
+}
+
+function getDateValue(value: string | null) {
+  if (!value) return null;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
+function getGoalsScored(match: TeamFixture) {
+  return match.isHome ? match.goals_home : match.goals_away;
+}
+
+function getGoalsTotal(match: TeamFixture) {
+  return match.goals_home + match.goals_away;
+}
+
+function percentUnder(values: number[], threshold: number) {
+  if (!values.length) return null;
+  const underCount = values.filter((value) => value <= threshold).length;
+  return Math.round((underCount / values.length) * 100);
+}
+
+function isBetween70And99(value: number | null) {
+  return value != null && value >= 70 && value <= 99;
+}
+
+function isBetween68And99(value: number | null) {
+  return value != null && value >= 68 && value <= 99;
+}
+
+function computeNextMatchBelowValues(values: number[], threshold: number) {
+  if (!values.length) {
+    return { lastAbove: false, triggers: 0, percent: 0 };
+  }
+  let triggers = 0;
+  let belowNext = 0;
+  for (let i = 0; i < values.length - 1; i += 1) {
+    if (values[i] > threshold) {
+      triggers += 1;
+      if (values[i + 1] < threshold) {
+        belowNext += 1;
+      }
+    }
+  }
+  const percent = triggers ? Math.round((belowNext / triggers) * 100) : 0;
+  const lastValue = values[values.length - 1];
+  return {
+    lastAbove: lastValue > threshold,
+    triggers,
+    percent,
+  };
+}
+
+function sliceHistory(list: TeamFixture[], cutoff: number, limit?: number | null) {
+  const prior = list.filter((entry) => entry.dateValue < cutoff);
+  if (typeof limit === "number") {
+    return prior.slice(0, limit);
+  }
+  return prior;
 }
 
 function getOutcome(f: any, teamId: number): "W" | "D" | "L" | null {
@@ -271,18 +352,43 @@ export async function POST(req: Request) {
         : body.nextMatchBelowMinPercent === "" || body.nextMatchBelowMinPercent == null
         ? undefined
         : Number(body.nextMatchBelowMinPercent),
+    badgeTarget:
+      typeof body.badgeTarget === "number"
+        ? body.badgeTarget
+        : body.badgeTarget == null || body.badgeTarget === ""
+        ? undefined
+        : Number(body.badgeTarget),
+    leagueId:
+      typeof body.leagueId === "number"
+        ? body.leagueId
+        : body.leagueId == null || body.leagueId === ""
+        ? undefined
+        : Number(body.leagueId),
   };
+  if (typeof filters.leagueId === "number" && !Number.isFinite(filters.leagueId)) {
+    filters.leagueId = undefined;
+  }
   if (
     typeof filters.nextMatchBelowMinPercent === "number" &&
     !Number.isFinite(filters.nextMatchBelowMinPercent)
   ) {
     filters.nextMatchBelowMinPercent = undefined;
   }
+  if (typeof filters.badgeTarget === "number") {
+    if (!Number.isFinite(filters.badgeTarget)) {
+      filters.badgeTarget = undefined;
+    }
+    if (filters.badgeTarget < 1 || filters.badgeTarget > TOTAL_BADGES) {
+      filters.badgeTarget = undefined;
+    }
+  }
 
   // 1) Charger toutes les fixtures FT de la saison courante (recent -> ancien)
   const { data: seasonFixtures, error: fixturesError } = await supabase
     .from("fixtures")
-    .select("id,date_utc,season,home_team_id,away_team_id,goals_home,goals_away")
+    .select(
+      "id,date_utc,season,competition_id,home_team_id,away_team_id,goals_home,goals_away"
+    )
     .eq("season", CURRENT_SEASON)
     .eq("status_short", "FT")
     .not("goals_home", "is", null)
@@ -296,17 +402,46 @@ export async function POST(req: Request) {
     );
   }
 
-  const fixturesByTeam = new Map<number, any[]>();
+  const fixturesByTeam = new Map<number, TeamFixture[]>();
   (seasonFixtures ?? []).forEach((f: any) => {
+    if (
+      typeof filters.leagueId === "number" &&
+      Number(f.competition_id) !== filters.leagueId
+    ) {
+      return;
+    }
     if (!f?.date_utc) return;
+    const dateValue = getDateValue(f.date_utc);
+    if (dateValue == null) return;
+    const goalsHome = Number(f.goals_home);
+    const goalsAway = Number(f.goals_away);
+    if (!Number.isFinite(goalsHome) || !Number.isFinite(goalsAway)) return;
     if (f.home_team_id) {
       const list = fixturesByTeam.get(f.home_team_id) ?? [];
-      list.push({ ...f, isHome: true });
+      list.push({
+        id: f.id,
+        date_utc: f.date_utc,
+        dateValue,
+        isHome: true,
+        home_team_id: f.home_team_id,
+        away_team_id: f.away_team_id,
+        goals_home: goalsHome,
+        goals_away: goalsAway,
+      });
       fixturesByTeam.set(f.home_team_id, list);
     }
     if (f.away_team_id) {
       const list = fixturesByTeam.get(f.away_team_id) ?? [];
-      list.push({ ...f, isHome: false });
+      list.push({
+        id: f.id,
+        date_utc: f.date_utc,
+        dateValue,
+        isHome: false,
+        home_team_id: f.home_team_id,
+        away_team_id: f.away_team_id,
+        goals_home: goalsHome,
+        goals_away: goalsAway,
+      });
       fixturesByTeam.set(f.away_team_id, list);
     }
   });
@@ -314,6 +449,8 @@ export async function POST(req: Request) {
   if (fixturesByTeam.size === 0) {
     return NextResponse.json({ ok: true, results: [] });
   }
+
+  const needsBadgeFilter = typeof filters.badgeTarget === "number";
 
   // 2) Charger les teams + leagues
   const teamIds = Array.from(fixturesByTeam.keys());
@@ -344,6 +481,60 @@ export async function POST(req: Request) {
   (compsData ?? []).forEach((c: any) => {
     compIndex.set(c.id, c.name);
   });
+
+  const nextFixturesByTeam = new Map<number, NextFixture>();
+  if (needsBadgeFilter) {
+    const nowIso = new Date().toISOString();
+    let nextQuery = supabase
+      .from("fixtures")
+      .select("id,date_utc,season,competition_id,home_team_id,away_team_id")
+      .eq("season", CURRENT_SEASON)
+      .not("date_utc", "is", null)
+      .gt("date_utc", nowIso)
+      .order("date_utc", { ascending: true });
+    if (typeof filters.leagueId === "number") {
+      nextQuery = nextQuery.eq("competition_id", filters.leagueId);
+    }
+    const { data: upcomingFixtures, error: upcomingError } = await nextQuery;
+    if (upcomingError) {
+      return NextResponse.json(
+        { ok: false, error: upcomingError.message },
+        { status: 500 }
+      );
+    }
+
+    (upcomingFixtures ?? []).forEach((fixture: any) => {
+      const dateValue = getDateValue(fixture.date_utc ?? null);
+      if (dateValue == null) return;
+      const homeId = Number(fixture.home_team_id);
+      const awayId = Number(fixture.away_team_id);
+      if (!Number.isFinite(homeId) || !Number.isFinite(awayId)) return;
+
+      if (fixturesByTeam.has(homeId)) {
+        const existing = nextFixturesByTeam.get(homeId);
+        if (!existing || dateValue < existing.dateValue) {
+          nextFixturesByTeam.set(homeId, {
+            id: fixture.id,
+            dateValue,
+            isHome: true,
+            opponentId: awayId,
+          });
+        }
+      }
+
+      if (fixturesByTeam.has(awayId)) {
+        const existing = nextFixturesByTeam.get(awayId);
+        if (!existing || dateValue < existing.dateValue) {
+          nextFixturesByTeam.set(awayId, {
+            id: fixture.id,
+            dateValue,
+            isHome: false,
+            opponentId: homeId,
+          });
+        }
+      }
+    });
+  }
 
   const results = [];
 
@@ -382,10 +573,91 @@ export async function POST(req: Request) {
     const green = prob.green ?? 0;
     const blue = prob.blue ?? 0;
 
-    const opponentId = lastFixture.isHome
+    const lastOpponentId = lastFixture.isHome
       ? lastFixture.away_team_id
       : lastFixture.home_team_id;
     const teamMeta = teamIndex.get(teamId);
+    if (
+      typeof filters.leagueId === "number" &&
+      Number(teamMeta?.competition_id) !== filters.leagueId
+    ) {
+      continue;
+    }
+
+    let badgeCount: number | null = null;
+    let nextMatchDate: string | null = null;
+    let nextOpponent: string | null = null;
+    if (needsBadgeFilter) {
+      const nextFixture = nextFixturesByTeam.get(teamId);
+      if (!nextFixture) continue;
+      const opponentId = nextFixture.opponentId;
+      const opponentList = fixturesByTeam.get(opponentId) ?? [];
+      if (mapped.length < 20 || opponentList.length < 20) continue;
+      const historyCutoffValue = nextFixture.dateValue - DAY_MS;
+      const teamHistory = sliceHistory(mapped, historyCutoffValue, null);
+      const oppHistory = sliceHistory(opponentList, historyCutoffValue, null);
+      if (!teamHistory.length || !oppHistory.length) continue;
+
+      const teamHistoryChrono = [...teamHistory].reverse();
+      const oppHistoryChrono = [...oppHistory].reverse();
+
+      const teamScoredValues = teamHistoryChrono.map(getGoalsScored);
+      const teamTotalValues = teamHistoryChrono.map(getGoalsTotal);
+      const oppTotalValues = oppHistoryChrono.map(getGoalsTotal);
+
+      const lastScored = teamScoredValues.length
+        ? teamScoredValues[teamScoredValues.length - 1]
+        : null;
+      const lastTotalTeam = teamTotalValues.length
+        ? teamTotalValues[teamTotalValues.length - 1]
+        : null;
+      const lastTotalOpp = oppTotalValues.length
+        ? oppTotalValues[oppTotalValues.length - 1]
+        : null;
+
+      const scoredNext = computeNextMatchBelowValues(
+        teamScoredValues,
+        SCORED_THRESHOLD
+      );
+      const totalNext = computeNextMatchBelowValues(
+        teamTotalValues,
+        TOTAL_THRESHOLD
+      );
+
+      const teamUnderPercent = percentUnder(teamTotalValues, TOTAL_THRESHOLD);
+      const oppUnderPercent = percentUnder(oppTotalValues, TOTAL_THRESHOLD);
+      const overUnderIndicatorActive =
+        isBetween68And99(teamUnderPercent) || isBetween68And99(oppUnderPercent);
+      if (!overUnderIndicatorActive) continue;
+
+      const homeHistory = teamHistoryChrono.filter((entry) => entry.isHome);
+      const awayHistory = teamHistoryChrono.filter((entry) => !entry.isHome);
+      const oppHomeHistory = oppHistoryChrono.filter((entry) => entry.isHome);
+      const oppAwayHistory = oppHistoryChrono.filter((entry) => !entry.isHome);
+
+      const homePercent = nextFixture.isHome
+        ? percentUnder(homeHistory.map(getGoalsTotal), TOTAL_THRESHOLD)
+        : percentUnder(oppHomeHistory.map(getGoalsTotal), TOTAL_THRESHOLD);
+      const awayPercent = nextFixture.isHome
+        ? percentUnder(oppAwayHistory.map(getGoalsTotal), TOTAL_THRESHOLD)
+        : percentUnder(awayHistory.map(getGoalsTotal), TOTAL_THRESHOLD);
+
+      const badges = [
+        lastScored != null && lastScored > 2.5,
+        scoredNext.lastAbove && scoredNext.triggers > 0 && scoredNext.percent >= 70,
+        totalNext.lastAbove && totalNext.triggers > 0 && totalNext.percent >= 70,
+        lastTotalTeam != null && lastTotalTeam > TOTAL_THRESHOLD,
+        lastTotalOpp != null && lastTotalOpp > TOTAL_THRESHOLD,
+        isBetween70And99(teamUnderPercent) && isBetween70And99(oppUnderPercent),
+        isBetween70And99(homePercent) && isBetween70And99(awayPercent),
+      ];
+
+      badgeCount = badges.filter(Boolean).length;
+      if (badgeCount !== filters.badgeTarget) continue;
+
+      nextMatchDate = new Date(nextFixture.dateValue).toISOString();
+      nextOpponent = teamIndex.get(opponentId)?.name ?? `Team ${opponentId}`;
+    }
 
     results.push({
       id: teamId,
@@ -393,11 +665,15 @@ export async function POST(req: Request) {
       logo: teamMeta?.logo ?? null,
       league: compIndex.get(teamMeta?.competition_id) ?? "Inconnu",
       lastMatchDate: lastFixture.date_utc ?? "",
-      opponent: (opponentId ? teamIndex.get(opponentId)?.name : null) ?? "Inconnu",
+      opponent:
+        (lastOpponentId ? teamIndex.get(lastOpponentId)?.name : null) ?? "Inconnu",
       market,
       probGreen: green,
       probBlue: blue ?? 0,
       aboveAverage: green >= 50,
+      nextMatchDate: nextMatchDate ?? undefined,
+      nextOpponent: nextOpponent ?? undefined,
+      badgeCount: badgeCount ?? undefined,
       nextMatchBelow: nextMatchBelow
         ? {
             percent: nextMatchBelow.percent,

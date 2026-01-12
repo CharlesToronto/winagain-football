@@ -9,6 +9,14 @@ export default function FavoritesBubbles() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isMobile = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    if (!isMobile) {
+      setOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
     const loadFavorites = () => {
       try {
         const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
@@ -57,7 +65,7 @@ export default function FavoritesBubbles() {
   if (favorites.length === 0) return null;
 
   return (
-    <div className="fixed top-4 left-4 z-50 flex flex-col items-start gap-2 md:top-6 md:left-6 mobile-fab">
+    <div className="fixed top-4 right-4 z-50 flex flex-col items-end gap-2 md:top-auto md:right-6 md:left-auto md:bottom-6 md:flex-col-reverse mobile-fab">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -85,7 +93,7 @@ export default function FavoritesBubbles() {
       </button>
 
       {open ? (
-        <div className="flex flex-col items-start gap-2 md:flex-row md:items-center">
+        <div className="flex flex-col items-start gap-2 md:items-end">
           {favorites.map((fav) => (
             <Link
               key={fav.id}

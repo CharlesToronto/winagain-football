@@ -35,7 +35,6 @@ export default function StatRow({
   label,
   count,
   percentGreen,
-  percentBlue,
   percentOrange,
   highlight,
 }: any) {
@@ -48,9 +47,8 @@ export default function StatRow({
   }`;
   const labelClass = highlight ? "text-yellow-100" : "";
   const countClass = highlight ? "text-yellow-200" : "text-white/25";
-  const greenClass = highlight ? "text-yellow-300" : "text-green-400";
-  const blueClass = "text-blue-400";
-  const orangeClass = highlight ? "text-yellow-300" : "text-orange-400";
+  const greenClass = "text-green-400";
+  const orangeClass = "text-orange-400";
 
   useEffect(() => {
     if (!isMobile && showCount) {
@@ -79,9 +77,6 @@ export default function StatRow({
       >
         <span className={`${greenClass} ${percentBaseClass}`} onClick={handleToggle}>
           {percentGreen}
-        </span>
-        <span className={`${blueClass} ${percentBaseClass}`} onClick={handleToggle}>
-          {percentBlue}
         </span>
         {percentOrange != null ? (
           <span className={`${orangeClass} ${percentBaseClass}`} onClick={handleToggle}>

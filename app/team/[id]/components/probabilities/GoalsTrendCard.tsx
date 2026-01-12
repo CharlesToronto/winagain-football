@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type Fixture = any;
 export type Mode = "FT" | "HT" | "2H";
+export type Location = "all" | "home" | "away";
 
 const THEME_GREEN = "#2dd4bf"; // turquoise doux
 const THEME_GREEN_DARK = "rgba(45, 212, 191, 0.18)";
@@ -35,6 +36,16 @@ type Point = {
   };
 };
 
+type ChartStyle = "line" | "bar";
+
+type BarPoint = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  value: number;
+};
+
 function toPath(points: Point[]) {
   if (points.length === 0) return "";
   if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
@@ -55,6 +66,40 @@ function toPath(points: Point[]) {
     d.push(`C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`);
   }
   return d.join(" ");
+}
+
+function padValues(values: number[], totalSlots: number) {
+  if (totalSlots <= 0) return [];
+  if (values.length >= totalSlots) {
+    return values.slice(values.length - totalSlots);
+  }
+  const padding = Array.from({ length: totalSlots - values.length }, () => null);
+  return [...padding, ...values];
+}
+
+function buildBars(values: Array<number | null>, totalSlots: number) {
+  const viewWidth = 100;
+  const viewHeight = 100;
+  if (!totalSlots) {
+    return { bars: [] as (BarPoint | null)[] };
+  }
+  const slotWidth = viewWidth / totalSlots;
+  const barWidth = Math.max(0.8, slotWidth * 0.65);
+  const bars = values.map((value, idx) => {
+    if (value == null) return null;
+    const clamped = clamp(value, 0, 8);
+    const height = (clamped / 8) * viewHeight;
+    const x = idx * slotWidth + (slotWidth - barWidth) / 2;
+    const y = viewHeight - height;
+    return {
+      x: x + barWidth / 2,
+      y,
+      width: barWidth,
+      height,
+      value: clamped,
+    };
+  });
+  return { bars };
 }
 
 export function getGoalsForMode(f: Fixture, mode: Mode) {
@@ -81,6 +126,20 @@ export function getGoalsForMode(f: Fixture, mode: Mode) {
   return { home, away };
 }
 
+function resolveIsHome(f: Fixture) {
+  if (typeof f?.isHome === "boolean") return f.isHome;
+  if (typeof f?.home_team_id === "number" && typeof f?.team_id === "number") {
+    return f.home_team_id === f.team_id;
+  }
+  return null;
+}
+
+function matchesLocation(isHome: boolean | null, location: Location) {
+  if (location === "all") return true;
+  if (isHome == null) return false;
+  return location === "home" ? isHome : !isHome;
+}
+
 export default function GoalsTrendCard({
   fixtures,
   opponentFixtures = [],
@@ -99,7 +158,9 @@ export default function GoalsTrendCard({
   onThresholdChange?: (value: number) => void;
 }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [chartStyle, setChartStyle] = useState<ChartStyle>("line");
   const [showOpponent, setShowOpponent] = useState(false);
+  const [location, setLocation] = useState<Location>("all");
   const [localThreshold, setLocalThreshold] = useState(3.5);
   const [isThresholdOpen, setIsThresholdOpen] = useState(false);
   const thresholdRef = useRef<HTMLDivElement | null>(null);
@@ -141,9 +202,17 @@ export default function GoalsTrendCard({
         const goals = getGoalsForMode(f, mode);
         if (!goals) return null; // on ignore les matchs sans score
         const { home, away } = goals;
-        const isHome = f.isHome ?? f.home_team_id === f.team_id;
+        const isHome = resolveIsHome(f);
+        if (!matchesLocation(isHome, location)) return null;
         const opponent =
-          isHome ? f.away_team_name ?? f.opp?.name : f.home_team_name ?? f.teams?.name;
+          isHome === null
+            ? f.away_team_name ??
+              f.home_team_name ??
+              f.opp?.name ??
+              f.teams?.name
+            : isHome
+              ? f.away_team_name ?? f.opp?.name
+              : f.home_team_name ?? f.teams?.name;
         const score = `${home}-${away}`;
         return {
           date,
@@ -174,7 +243,7 @@ export default function GoalsTrendCard({
     }));
 
     return { points: pts, avg, total: totals.length };
-  }, [fixtures, mode]);
+  }, [fixtures, mode, location]);
 
   const viewHeight = 100;
   const viewWidth = 100;
@@ -183,6 +252,7 @@ export default function GoalsTrendCard({
     viewHeight - (clamp(threshold, 0, 8) / 8) * viewHeight;
 
   const hoveredPoint = hoverIdx !== null && points[hoverIdx] ? points[hoverIdx] : null;
+  const referenceLimit = points.length || referenceCount;
   const opponentSeries = useMemo(() => {
     const usableRaw = (opponentFixtures ?? [])
       .map((f, idx) => {
@@ -197,6 +267,8 @@ export default function GoalsTrendCard({
         const goals = getGoalsForMode(f, mode);
         if (!goals) return null;
         const { home, away } = goals;
+        const isHome = resolveIsHome(f);
+        if (!matchesLocation(isHome, location)) return null;
         return {
           date,
           totalGoals: home + away,
@@ -211,8 +283,8 @@ export default function GoalsTrendCard({
       .sort((a, b) => (a.date ?? 0) - (b.date ?? 0));
 
     const usable =
-      referenceCount > 0 && usableRaw.length > referenceCount
-        ? usableRaw.slice(usableRaw.length - referenceCount)
+      referenceLimit > 0 && usableRaw.length > referenceLimit
+        ? usableRaw.slice(usableRaw.length - referenceLimit)
         : usableRaw;
 
     const totals = usable.map((u) => clamp(u.totalGoals, 0, 8));
@@ -230,7 +302,7 @@ export default function GoalsTrendCard({
     }));
 
     return { points: pts, avg, total: totals.length };
-  }, [opponentFixtures, referenceCount, mode]);
+  }, [opponentFixtures, referenceLimit, mode, location]);
 
   const hoveredOpponent =
     hoverIdx !== null && opponentSeries.points[hoverIdx]
@@ -238,21 +310,53 @@ export default function GoalsTrendCard({
       : null;
   const buttonBaseClass =
     "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
+  const activeButtonClass = "bg-green-500/30 border-green-400 text-white";
   const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
   const filterRowClass = `flex items-center gap-2 flex-nowrap pb-1 ${
     isThresholdOpen ? "overflow-visible" : "overflow-x-auto no-scrollbar"
   }`;
+  const mainBars = useMemo(
+    () => buildBars(points.map((point) => point.value), points.length).bars,
+    [points]
+  );
+  const opponentBars = useMemo(() => {
+    const padded = padValues(
+      opponentSeries.points.map((point) => point.value),
+      points.length
+    );
+    return buildBars(padded, points.length).bars;
+  }, [opponentSeries.points, points.length]);
+  const hoveredBar = hoverIdx !== null ? mainBars[hoverIdx] ?? null : null;
 
   return (
-    <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2 flex flex-col md:h-[20rem]">
+    <div className="bg-white/5 rounded-xl p-6 shadow md:col-span-2 flex flex-col md:h-[20rem] relative">
       <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts (total par match)</h3>
-          <p className="text-xs text-white/70">Série de {total} match(s)</p>
+          <p className="text-xs text-white/70">SAcrie de {total} match(s)</p>
         </div>
         <div className={filterRowClass}>
-          <div className="flex items-center gap-2 text-xs text-white/70 shrink-0">
-            <span className="whitespace-nowrap">Nouvelle moyenne</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {([
+              { key: "all", label: "General" },
+              { key: "home", label: "Home" },
+              { key: "away", label: "Away" },
+            ] as { key: Location; label: string }[]).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setLocation(item.key)}
+                className={`${buttonBaseClass} ${
+                  location === item.key ? activeButtonClass : inactiveButtonClass
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden md:inline-flex text-white/30">.</span>
+          <div className="flex items-center gap-2 text-xs text-white/70 shrink-0 md:absolute md:top-6 md:right-6 md:z-10">
+            <span className="whitespace-nowrap">Moyenne</span>
             <div className="relative" ref={thresholdRef}>
               <button
                 type="button"
@@ -260,15 +364,15 @@ export default function GoalsTrendCard({
                 onClick={() => setIsThresholdOpen((open) => !open)}
                 aria-haspopup="listbox"
                 aria-expanded={isThresholdOpen}
-                aria-label="Nouvelle moyenne"
+                aria-label="Moyenne"
               >
                 {threshold}
               </button>
               {isThresholdOpen && (
                 <div
-                  className="absolute left-0 mt-1 min-w-full rounded-md border border-white/10 bg-white/10 text-white backdrop-blur-md shadow-lg z-20"
+                  className="absolute left-0 md:left-auto md:right-0 mt-1 min-w-full rounded-md border border-white/10 bg-white/10 text-white backdrop-blur-md shadow-lg z-20"
                   role="listbox"
-                  aria-label="Nouvelle moyenne"
+                  aria-label="Moyenne"
                 >
                   {THRESHOLD_OPTIONS.map((value) => (
                     <button
@@ -291,6 +395,24 @@ export default function GoalsTrendCard({
               )}
             </div>
           </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {([
+              { key: "line", label: "Ligne" },
+              { key: "bar", label: "Barres" },
+            ] as { key: ChartStyle; label: string }[]).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setChartStyle(item.key)}
+                className={`${buttonBaseClass} ${
+                  chartStyle === item.key ? activeButtonClass : inactiveButtonClass
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden md:inline-flex text-white/30">.</span>
           <button
             onClick={() => setShowOpponent((v) => !v)}
             disabled={!opponentFixtures || opponentFixtures.length === 0}
@@ -372,74 +494,131 @@ export default function GoalsTrendCard({
               />
             )}
 
-            {/* Zone + courbe lissée */}
-            <defs>
-              <linearGradient id="goalsLineSmooth" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.6" />
-                <stop offset="100%" stopColor={THEME_GREEN} stopOpacity="0.05" />
-              </linearGradient>
-            </defs>
-
-            <path
-              d={`${toPath(points)} L ${viewWidth},${viewHeight} L 0,${viewHeight} Z`}
-              fill="url(#goalsLineSmooth)"
-              opacity="0.6"
-            />
-            <path
-              d={toPath(points)}
-              fill="none"
-              stroke={THEME_GREEN}
-              strokeWidth={0.4}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-
-            {showOpponent && opponentSeries.points.length > 0 && (
+            {chartStyle === "line" ? (
               <>
+                {/* Zone + courbe lissAce */}
                 <defs>
-                  <linearGradient id="opponentLineSmooth" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor={THEME_ORANGE} stopOpacity="0.35" />
-                    <stop offset="100%" stopColor={THEME_ORANGE} stopOpacity="0.05" />
+                  <linearGradient id="goalsLineSmooth" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.6" />
+                    <stop offset="100%" stopColor={THEME_GREEN} stopOpacity="0.05" />
                   </linearGradient>
                 </defs>
+
                 <path
-                  d={`${toPath(opponentSeries.points)} L ${viewWidth},${viewHeight} L 0,${viewHeight} Z`}
-                  fill="url(#opponentLineSmooth)"
-                  opacity="0.5"
+                  d={`${toPath(points)} L ${viewWidth},${viewHeight} L 0,${viewHeight} Z`}
+                  fill="url(#goalsLineSmooth)"
+                  opacity="0.6"
                 />
                 <path
-                  d={toPath(opponentSeries.points)}
+                  d={toPath(points)}
                   fill="none"
-                  stroke={THEME_ORANGE}
+                  stroke={THEME_GREEN}
                   strokeWidth={0.4}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                 />
+
+                {showOpponent && opponentSeries.points.length > 0 && (
+                  <>
+                    <defs>
+                      <linearGradient id="opponentLineSmooth" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor={THEME_ORANGE} stopOpacity="0.35" />
+                        <stop offset="100%" stopColor={THEME_ORANGE} stopOpacity="0.05" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d={`${toPath(opponentSeries.points)} L ${viewWidth},${viewHeight} L 0,${viewHeight} Z`}
+                      fill="url(#opponentLineSmooth)"
+                      opacity="0.5"
+                    />
+                    <path
+                      d={toPath(opponentSeries.points)}
+                      fill="none"
+                      stroke={THEME_ORANGE}
+                      strokeWidth={0.4}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  </>
+                )}
+
+                {/* Points invisibles pour le hover */}
+                {points.map((p, idx) => (
+                  <circle
+                    key={`main-${idx}`}
+                    cx={p.x}
+                    cy={p.y}
+                    r={2.2}
+                    fill="transparent"
+                    stroke="transparent"
+                  />
+                ))}
+                {showOpponent &&
+                  opponentSeries.points.map((p, idx) => (
+                    <circle
+                      key={`opp-${idx}`}
+                      cx={p.x}
+                      cy={p.y}
+                      r={2.2}
+                      fill="transparent"
+                      stroke="transparent"
+                    />
+                  ))}
+              </>
+            ) : (
+              <>
+                <defs>
+                  <linearGradient id="goalsBars" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.9" />
+                    <stop offset="100%" stopColor={THEME_GREEN} stopOpacity="0.15" />
+                  </linearGradient>
+                  <linearGradient id="opponentBars" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={THEME_ORANGE} stopOpacity="0.7" />
+                    <stop offset="100%" stopColor={THEME_ORANGE} stopOpacity="0.12" />
+                  </linearGradient>
+                </defs>
+
+                {hoveredBar && (
+                  <rect
+                    x={hoveredBar.x - hoveredBar.width / 2}
+                    y={0}
+                    width={hoveredBar.width}
+                    height={viewHeight}
+                    fill={THEME_GREEN_DARK}
+                  />
+                )}
+
+                {showOpponent &&
+                  opponentBars.map((bar, idx) =>
+                    bar ? (
+                      <rect
+                        key={`opp-bar-${idx}`}
+                        x={bar.x - bar.width / 2}
+                        y={bar.y}
+                        width={bar.width}
+                        height={bar.height}
+                        fill="url(#opponentBars)"
+                        opacity={0.5}
+                        rx={0.6}
+                      />
+                    ) : null
+                  )}
+
+                {mainBars.map((bar, idx) =>
+                  bar ? (
+                    <rect
+                      key={`main-bar-${idx}`}
+                      x={bar.x - bar.width / 2}
+                      y={bar.y}
+                      width={bar.width}
+                      height={bar.height}
+                      fill="url(#goalsBars)"
+                      rx={0.6}
+                    />
+                  ) : null
+                )}
               </>
             )}
-
-            {/* Points invisibles pour le hover */}
-            {points.map((p, idx) => (
-              <circle
-                key={`main-${idx}`}
-                cx={p.x}
-                cy={p.y}
-                r={2.2}
-                fill="transparent"
-                stroke="transparent"
-              />
-            ))}
-            {showOpponent &&
-              opponentSeries.points.map((p, idx) => (
-                <circle
-                  key={`opp-${idx}`}
-                  cx={p.x}
-                  cy={p.y}
-                  r={2.2}
-                  fill="transparent"
-                  stroke="transparent"
-                />
-              ))}
           </svg>
 
           {/* Overlay hover */}
@@ -495,25 +674,6 @@ export default function GoalsTrendCard({
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {points.length > 0 && (
-        <div className="mt-3">
-          <div className="relative w-full h-4">
-            {points.map((p, idx) => {
-              const left =
-                points.length === 1 ? 0 : (idx / (points.length - 1)) * 100;
-              return (
-                <span
-                  key={`idx-${idx}`}
-                  className="w-2 h-2 rounded-full bg-blue-400 absolute -translate-x-1/2"
-                  style={{ left: `${left}%`, top: "50%", transform: "translate(-50%, -50%)" }}
-                  title={`Match ${idx + 1}`}
-                />
-              );
-            })}
-          </div>
         </div>
       )}
 

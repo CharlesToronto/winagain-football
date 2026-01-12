@@ -81,6 +81,35 @@ type BarPoint = {
   tooltip: SeriesEntry["tooltip"];
 };
 
+type ChartStyle = "bar" | "line";
+
+type LinePoint = {
+  x: number;
+  y: number;
+};
+
+function toPath(points: LinePoint[]) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+
+  const p = points;
+  const d = [];
+  d.push(`M ${p[0].x},${p[0].y}`);
+  for (let i = 0; i < p.length - 1; i++) {
+    const p0 = p[i === 0 ? i : i - 1];
+    const p1 = p[i];
+    const p2 = p[i + 1];
+    const p3 = p[i + 2 < p.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d.push(`C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`);
+  }
+  return d.join(" ");
+}
+
 export function buildEntries(fixtures: Fixture[], mode: Mode, location: Location) {
   const mapped = (fixtures ?? [])
     .map((f) => {
@@ -174,6 +203,7 @@ export default function GoalsScoredTrendCard({
   onLocationChange?: (value: Location) => void;
 }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [chartStyle, setChartStyle] = useState<ChartStyle>("bar");
   const [showOpponent, setShowOpponent] = useState(false);
   const [localThreshold, setLocalThreshold] = useState(3.5);
   const [isThresholdOpen, setIsThresholdOpen] = useState(false);
@@ -272,9 +302,10 @@ export default function GoalsScoredTrendCard({
   const filterRowClass = `flex items-center gap-2 flex-nowrap pb-1 ${
     isThresholdOpen ? "overflow-visible" : "overflow-x-auto no-scrollbar"
   }`;
+  const opponentLinePoints = opponentSeries.bars.filter(Boolean) as BarPoint[];
 
   return (
-    <div className="bg-sky-400/10 backdrop-blur-sm rounded-xl p-6 shadow md:col-span-2 h-[20rem] flex flex-col">
+    <div className="bg-sky-400/10 backdrop-blur-sm rounded-xl p-6 shadow md:col-span-2 h-[20rem] flex flex-col relative">
       <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts {resolvedTeamName}</h3>
@@ -298,8 +329,9 @@ export default function GoalsScoredTrendCard({
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 text-xs text-white/70 shrink-0">
-            <span className="whitespace-nowrap">Nouvelle moyenne</span>
+          <span className="hidden md:inline-flex text-white/30">.</span>
+          <div className="flex items-center gap-2 text-xs text-white/70 shrink-0 md:absolute md:top-6 md:right-6 md:z-10">
+            <span className="whitespace-nowrap">Moyenne</span>
             <div className="relative" ref={thresholdRef}>
               <button
                 type="button"
@@ -307,15 +339,15 @@ export default function GoalsScoredTrendCard({
                 onClick={() => setIsThresholdOpen((open) => !open)}
                 aria-haspopup="listbox"
                 aria-expanded={isThresholdOpen}
-                aria-label="Nouvelle moyenne"
+                aria-label="Moyenne"
               >
                 {threshold}
               </button>
               {isThresholdOpen && (
                 <div
-                  className="absolute left-0 mt-1 min-w-full rounded-md border border-white/10 bg-white/10 text-white backdrop-blur-md shadow-lg z-20"
+                  className="absolute left-0 md:left-auto md:right-0 mt-1 min-w-full rounded-md border border-white/10 bg-white/10 text-white backdrop-blur-md shadow-lg z-20"
                   role="listbox"
-                  aria-label="Nouvelle moyenne"
+                  aria-label="Moyenne"
                 >
                   {THRESHOLD_OPTIONS.map((value) => (
                     <button
@@ -338,6 +370,24 @@ export default function GoalsScoredTrendCard({
               )}
             </div>
           </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {([
+              { key: "bar", label: "Barres" },
+              { key: "line", label: "Ligne" },
+            ] as { key: ChartStyle; label: string }[]).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setChartStyle(item.key)}
+                className={`${buttonBaseClass} ${
+                  chartStyle === item.key ? activeButtonClass : inactiveButtonClass
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <span className="hidden md:inline-flex text-white/30">.</span>
           <button
             onClick={() => setShowOpponent((v) => !v)}
             disabled={!opponentFixtures || opponentFixtures.length === 0}
@@ -417,55 +467,115 @@ export default function GoalsScoredTrendCard({
               />
             )}
 
-            <defs>
-              <linearGradient id="goalsBars" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.9" />
-                <stop offset="100%" stopColor={THEME_GREEN} stopOpacity="0.15" />
-              </linearGradient>
-              <linearGradient id="opponentBars" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={THEME_ORANGE} stopOpacity="0.7" />
-                <stop offset="100%" stopColor={THEME_ORANGE} stopOpacity="0.1" />
-              </linearGradient>
-            </defs>
+            {chartStyle === "bar" ? (
+              <>
+                <defs>
+                  <linearGradient id="goalsBars" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.9" />
+                    <stop offset="100%" stopColor={THEME_GREEN} stopOpacity="0.15" />
+                  </linearGradient>
+                  <linearGradient id="opponentBars" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={THEME_ORANGE} stopOpacity="0.7" />
+                    <stop offset="100%" stopColor={THEME_ORANGE} stopOpacity="0.1" />
+                  </linearGradient>
+                </defs>
 
-            {hoveredPoint && (
-              <rect
-                x={hoveredPoint.x - hoveredPoint.width / 2}
-                y={0}
-                width={hoveredPoint.width}
-                height={viewHeight}
-                fill={THEME_GREEN_SOFT}
-              />
-            )}
-
-            {showOpponent &&
-              opponentSeries.bars.map((bar, idx) => {
-                if (!bar) return null;
-                return (
+                {hoveredPoint && (
                   <rect
-                    key={`opp-${idx}`}
+                    x={hoveredPoint.x - hoveredPoint.width / 2}
+                    y={0}
+                    width={hoveredPoint.width}
+                    height={viewHeight}
+                    fill={THEME_GREEN_SOFT}
+                  />
+                )}
+
+                {showOpponent &&
+                  opponentSeries.bars.map((bar, idx) => {
+                    if (!bar) return null;
+                    return (
+                      <rect
+                        key={`opp-${idx}`}
+                        x={bar.x - bar.width / 2}
+                        y={bar.y}
+                        width={bar.width}
+                        height={bar.height}
+                        fill="url(#opponentBars)"
+                        opacity={0.5}
+                        rx={0.6}
+                      />
+                    );
+                  })}
+
+                {points.map((bar, idx) => (
+                  <rect
+                    key={`main-${idx}`}
                     x={bar.x - bar.width / 2}
                     y={bar.y}
                     width={bar.width}
                     height={bar.height}
-                    fill="url(#opponentBars)"
-                    opacity={0.5}
+                    fill="url(#goalsBars)"
                     rx={0.6}
                   />
-                );
-              })}
+                ))}
+              </>
+            ) : (
+              <>
+                <defs>
+                  <linearGradient id="goalsLineSmooth" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.6" />
+                    <stop offset="100%" stopColor={THEME_GREEN} stopOpacity="0.05" />
+                  </linearGradient>
+                </defs>
 
-            {points.map((bar, idx) => (
-              <rect
-                key={`main-${idx}`}
-                x={bar.x - bar.width / 2}
-                y={bar.y}
-                width={bar.width}
-                height={bar.height}
-                fill="url(#goalsBars)"
-                rx={0.6}
-              />
-            ))}
+                <path
+                  d={`${toPath(points)} L ${viewWidth},${viewHeight} L 0,${viewHeight} Z`}
+                  fill="url(#goalsLineSmooth)"
+                  opacity="0.6"
+                />
+                <path
+                  d={toPath(points)}
+                  fill="none"
+                  stroke={THEME_GREEN}
+                  strokeWidth={0.4}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+
+                {showOpponent && opponentLinePoints.length > 0 && (
+                  <>
+                    <defs>
+                      <linearGradient id="opponentLineSmooth" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor={THEME_ORANGE} stopOpacity="0.35" />
+                        <stop offset="100%" stopColor={THEME_ORANGE} stopOpacity="0.05" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d={`${toPath(opponentLinePoints)} L ${viewWidth},${viewHeight} L 0,${viewHeight} Z`}
+                      fill="url(#opponentLineSmooth)"
+                      opacity="0.5"
+                    />
+                    <path
+                      d={toPath(opponentLinePoints)}
+                      fill="none"
+                      stroke={THEME_ORANGE}
+                      strokeWidth={0.4}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  </>
+                )}
+
+                {hoveredPoint && (
+                  <circle
+                    cx={hoveredPoint.x}
+                    cy={hoveredPoint.y}
+                    r={1.4}
+                    fill={THEME_GREEN}
+                  />
+                )}
+              </>
+            )}
           </svg>
 
           <div

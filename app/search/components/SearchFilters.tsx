@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type {
   FactType,
   OverUnderDirection,
@@ -36,9 +37,14 @@ export function SearchFilters({
   onSearch: () => void;
   loading: boolean;
 }) {
+  const [competitions, setCompetitions] = useState<
+    { id: number; name?: string | null; country?: string | null }[]
+  >([]);
+  const [competitionsLoading, setCompetitionsLoading] = useState(false);
   const selectClassName =
     "rounded bg-[#1f0f3a] border border-white/20 px-2 py-2 text-sm text-white [color-scheme:dark]";
   const factType = filters.factType ?? "none";
+  const leagueIdValue = filters.leagueId != null ? String(filters.leagueId) : "all";
   const streakMin = filters.streakMin ?? 1;
   const overUnderDirection = filters.overUnderDirection ?? "OVER";
   const overUnderLine = filters.overUnderLine ?? 2.5;
@@ -46,6 +52,8 @@ export function SearchFilters({
   const nextMatchBelowEnabled = filters.nextMatchBelowEnabled ?? false;
   const nextMatchBelowLine = filters.nextMatchBelowLine ?? 1.5;
   const nextMatchBelowMinPercent = filters.nextMatchBelowMinPercent;
+  const badgeTargetValue =
+    filters.badgeTarget != null ? String(filters.badgeTarget) : "any";
   const inputClassName =
     "rounded bg-[#1f0f3a] border border-white/20 px-2 py-2 text-sm text-white [color-scheme:dark]";
 
@@ -64,12 +72,87 @@ export function SearchFilters({
     onChange(next);
   };
 
+  useEffect(() => {
+    let active = true;
+    setCompetitionsLoading(true);
+    fetch("/api/competitions")
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load competitions");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        if (Array.isArray(data)) {
+          const cleaned = data
+            .filter((item) => item && typeof item.id === "number")
+            .map((item) => ({
+              id: item.id,
+              name: item.name ?? `League ${item.id}`,
+              country: item.country ?? null,
+            }))
+            .sort((a, b) => {
+              const labelA = `${a.country ?? ""} - ${a.name ?? ""}`.toLowerCase();
+              const labelB = `${b.country ?? ""} - ${b.name ?? ""}`.toLowerCase();
+              return labelA.localeCompare(labelB, "fr");
+            });
+          setCompetitions(cleaned);
+        } else {
+          setCompetitions([]);
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setCompetitions([]);
+      })
+      .finally(() => {
+        if (!active) return;
+        setCompetitionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-white">
         <h2 className="text-xl font-semibold mb-4">Filtres de recherche</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-white/70">Ligue</label>
+            <select
+              className={selectClassName}
+              value={leagueIdValue}
+              onChange={(e) =>
+                onChange({
+                  ...filters,
+                  leagueId:
+                    e.target.value === "all" ? undefined : Number(e.target.value),
+                })
+              }
+            >
+              <option value="all">Toutes ligues</option>
+              {competitionsLoading ? (
+                <option value="loading" disabled>
+                  Chargement...
+                </option>
+              ) : (
+                competitions.map((comp) => {
+                  const name = comp.name ?? `League ${comp.id}`;
+                  const label = comp.country ? `${comp.country} - ${name}` : name;
+                  return (
+                    <option key={comp.id} value={comp.id}>
+                      {label}
+                    </option>
+                  );
+                })
+              )}
+            </select>
+            <span className="text-xs text-white/60">
+              Si une ligue est choisie, les criteres s'appliquent uniquement dessus.
+            </span>
+          </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm text-white/70">Condition dernier match</label>
             <select
@@ -242,6 +325,35 @@ export function SearchFilters({
             />
             <span className="text-xs text-white/50">
               Laisse vide pour tout afficher.
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-white/70">
+              Badges cible (prochain match)
+            </label>
+            <select
+              className={selectClassName}
+              value={badgeTargetValue}
+              onChange={(e) =>
+                onChange({
+                  ...filters,
+                  badgeTarget:
+                    e.target.value === "any" ? undefined : Number(e.target.value),
+                })
+              }
+            >
+              <option value="any">Tous</option>
+              {[1, 2, 3, 4, 5, 6, 7].map((value) => (
+                <option key={value} value={value}>
+                  Badge {value}/7
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-white/60">
+              Filtre les prochains matchs selon le nombre de badges.
             </span>
           </div>
         </div>

@@ -26,10 +26,8 @@ type NextMatch = Record<string, any> | null;
 type RangeOption = number | "season";
 
 const CURRENT_SEASON = 2025;
-const OVER_UNDER_HIGH_MIN = 75;
+const OVER_UNDER_HIGH_MIN = 70;
 const OVER_UNDER_HIGH_MAX = 99;
-const OVER_UNDER_LOW_MIN = 1;
-const OVER_UNDER_LOW_MAX = 25;
 const LAST_MATCH_TOTAL_GOALS_THRESHOLD = 3.5;
 const DRAW_PERCENT_MAX = 30;
 const H2H_SEASONS = [2025, 2024];
@@ -184,6 +182,14 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   }, [tabParam]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isMobile = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    if (!isMobile) {
+      setActionsOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
     async function load() {
       try {
         const result: TeamAdapterResult = await loadTeamData(id, effectiveRange, cutoffDate);
@@ -333,8 +339,8 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const overUnderTitle = overUnderMatchActive
     ? overUnderHighlight
       ? "Surlignage over/under actif"
-      : "Surligner les stats 75-99% ou 1-25%"
-    : "Aucun match de stats 75-99% ou 1-25%";
+      : "Surligner les stats 70-99%"
+    : "Aucun match de stats 70-99%";
   const trendSignalTitle = trendSignalDetails.title;
   const copyTitle = "Copier le nom (clic) - Copier le match (double clic)";
 
@@ -884,6 +890,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           teamId={teamId}
           leagueId={leagueIdForStats}
           range={effectiveRange}
+          asOfDate={asOfDate}
         />
       ) : tab === "league" ? (
         <LeagueStatsView
@@ -1034,7 +1041,6 @@ function getHighlightBandKeySet(stats: any) {
   const matches = new Set<string>();
   const ranges = [
     { min: OVER_UNDER_HIGH_MIN, max: OVER_UNDER_HIGH_MAX, band: "high" as const },
-    { min: OVER_UNDER_LOW_MIN, max: OVER_UNDER_LOW_MAX, band: "low" as const },
   ];
   const addMatches = (key: string, value: any) => {
     const percent =

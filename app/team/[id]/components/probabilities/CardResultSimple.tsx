@@ -1,39 +1,116 @@
+import { useMemo, useState } from "react";
 import StatRow from "./StatRow";
+import { getProbabilityEngines } from "@/lib/adapters/probabilities";
+
+type Location = "all" | "home" | "away";
+type Mode = "FT" | "HT" | "2H";
+
+function resolveIsHome(fixture: any) {
+  if (typeof fixture?.isHome === "boolean") return fixture.isHome;
+  return null;
+}
+
+function filterFixtures(fixtures: any[] = [], location: Location) {
+  if (location === "all") return fixtures;
+  return fixtures.filter((fixture) => {
+    const isHome = resolveIsHome(fixture);
+    if (isHome == null) return false;
+    return location === "home" ? isHome : !isHome;
+  });
+}
 
 export default function CardResultSimple({
   data,
   streaks,
-  opponentData,
+  fixtures = [],
+  opponentFixtures = [],
+  showOpponentComparison = false,
+  mode = "FT",
 }: {
-  data: any;
-  streaks: any;
-  opponentData?: any;
+  data?: any;
+  streaks?: any;
+  fixtures?: any[];
+  opponentFixtures?: any[];
+  showOpponentComparison?: boolean;
+  mode?: Mode;
 }) {
-  if (!data) return null;
-  const resolvedStreaks = data?.streaks ?? streaks ?? {};
-  const total = data.total ?? 0;
+  const [location, setLocation] = useState<Location>("all");
+  const engines = useMemo(() => getProbabilityEngines(), []);
+  const computeEngine = engines.engines[mode];
+  const computeStreaks = engines.computeStreaks;
+
+  const filteredFixtures = useMemo(
+    () => filterFixtures(fixtures ?? [], location),
+    [fixtures, location]
+  );
+  const filteredOpponentFixtures = useMemo(
+    () => filterFixtures(opponentFixtures ?? [], location),
+    [opponentFixtures, location]
+  );
+  const statsEngine = useMemo(
+    () => (computeEngine ? computeEngine(filteredFixtures) : data),
+    [computeEngine, filteredFixtures, data]
+  );
+  const resolvedStreaks = useMemo(
+    () => (computeStreaks ? computeStreaks(filteredFixtures) : streaks ?? {}),
+    [computeStreaks, filteredFixtures, streaks]
+  );
+  const opponentStats = useMemo(
+    () =>
+      showOpponentComparison && computeEngine
+        ? computeEngine(filteredOpponentFixtures)
+        : null,
+    [showOpponentComparison, computeEngine, filteredOpponentFixtures]
+  );
+
+  if (!statsEngine) return null;
+  const total = statsEngine.total ?? 0;
   const safe = (obj: any) => ({
     raw: obj?.raw ?? obj?.count ?? 0,
     percent: obj?.percent ?? 0,
   });
   const percentFallback = "-";
-  const win = safe(data.win);
-  const draw = safe(data.draw);
-  const lose = safe(data.lose);
-  const btts = safe(data.btts);
-  const cleanHome = safe(data.clean_home);
-  const cleanAway = safe(data.clean_away);
-  const showOpponent = Boolean(opponentData);
-  const opponentWin = safe(opponentData?.win);
-  const opponentDraw = safe(opponentData?.draw);
-  const opponentLose = safe(opponentData?.lose);
-  const opponentBtts = safe(opponentData?.btts);
-  const opponentCleanHome = safe(opponentData?.clean_home);
-  const opponentCleanAway = safe(opponentData?.clean_away);
+  const win = safe(statsEngine.win);
+  const draw = safe(statsEngine.draw);
+  const lose = safe(statsEngine.lose);
+  const btts = safe(statsEngine.btts);
+  const cleanHome = safe(statsEngine.clean_home);
+  const cleanAway = safe(statsEngine.clean_away);
+  const showOpponent = Boolean(showOpponentComparison && opponentStats);
+  const opponentWin = safe(opponentStats?.win);
+  const opponentDraw = safe(opponentStats?.draw);
+  const opponentLose = safe(opponentStats?.lose);
+  const opponentBtts = safe(opponentStats?.btts);
+  const opponentCleanHome = safe(opponentStats?.clean_home);
+  const opponentCleanAway = safe(opponentStats?.clean_away);
+  const buttonBaseClass =
+    "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
+  const activeButtonClass = "bg-green-500/30 border-green-400 text-white";
+  const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
 
   return (
     <div className="card bg-white/5 rounded-xl p-6 shadow">
-      <h3 className="font-semibold mb-3">Résultats</h3>
+      <div className="flex flex-col gap-2 mb-3">
+        <h3 className="font-semibold">RAcsultats</h3>
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
+          {([
+            { key: "all", label: "General" },
+            { key: "home", label: "Home" },
+            { key: "away", label: "Away" },
+          ] as { key: Location; label: string }[]).map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setLocation(option.key)}
+              className={`${buttonBaseClass} ${
+                location === option.key ? activeButtonClass : inactiveButtonClass
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="space-y-1">
         <StatRow
           label="Victoire"
@@ -56,7 +133,7 @@ export default function CardResultSimple({
           }
         />
         <StatRow
-          label="Défaite"
+          label="DAcfaite"
           count={`(${lose.raw}/${total})`}
           percentGreen={`${lose.percent}%`}
           percentOrange={showOpponent ? `${opponentLose.percent}%` : undefined}

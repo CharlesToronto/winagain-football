@@ -13,6 +13,17 @@ type SeriesEntry = {
   value: number;
 };
 
+const THRESHOLD_MIN = 0.5;
+const THRESHOLD_MAX = 5.5;
+const DEFAULT_THRESHOLD = 3.5;
+
+function resolveDefaultThreshold(value: number | null, fallback: number) {
+  if (!Number.isFinite(value ?? NaN)) return fallback;
+  const adjusted = (value as number) - 0.5;
+  const clamped = Math.min(THRESHOLD_MAX, Math.max(THRESHOLD_MIN, adjusted));
+  return Math.round(clamped * 2) / 2;
+}
+
 function formatNumber(value: number) {
   if (Number.isNaN(value)) return "--";
   const rounded = Math.round(value * 100) / 100;
@@ -185,11 +196,25 @@ export default function GoalsTotalTrendSection({
   badgeActiveCount?: number;
   badgeTotalCount?: number;
 }) {
-  const [threshold, setThreshold] = useState(3.5);
+  const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD);
   const [mobileIndex, setMobileIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const mobileSlides = 2;
   const entries = useMemo(() => buildEntries(fixtures ?? [], mode), [fixtures, mode]);
+  const defaultThreshold = useMemo(() => {
+    const lastValue = entries.length ? entries[entries.length - 1].value : null;
+    return resolveDefaultThreshold(lastValue, DEFAULT_THRESHOLD);
+  }, [entries]);
+  const defaultThresholdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prevDefault = defaultThresholdRef.current;
+    if (prevDefault == null || threshold === prevDefault) {
+      if (threshold !== defaultThreshold) {
+        setThreshold(defaultThreshold);
+      }
+    }
+    defaultThresholdRef.current = defaultThreshold;
+  }, [defaultThreshold, threshold]);
   const opponentEntries = useMemo(
     () => buildEntries(opponentFixtures ?? [], mode),
     [opponentFixtures, mode]

@@ -346,7 +346,10 @@ export default function ProbabilitiesView({
                   <CardResultSimple
                     data={stats}
                     streaks={streaks}
-                    opponentData={opponentStats}
+                    fixtures={fixtures ?? []}
+                    opponentFixtures={opponentFixtures}
+                    showOpponentComparison={opponentComparisonActive}
+                    mode={filter}
                   />
                 </div>
               </div>
@@ -379,7 +382,14 @@ export default function ProbabilitiesView({
         <div className="space-y-2">
           <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
           <div className={cardBorderClass}>
-            <CardResultSimple data={stats} streaks={streaks} opponentData={opponentStats} />
+            <CardResultSimple
+              data={stats}
+              streaks={streaks}
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              showOpponentComparison={opponentComparisonActive}
+              mode={filter}
+            />
           </div>
         </div>
         <div className="space-y-2">
