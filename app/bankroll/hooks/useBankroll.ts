@@ -5,7 +5,9 @@ import { Bet, INITIAL_BANKROLL, computeStats, recomputeSequence } from "../utils
 import {
   deleteBankrollBet,
   fetchBankrollBets,
+  fetchBankrollSettings,
   upsertBankrollBets,
+  upsertBankrollSettings,
 } from "@/lib/adapters/bankroll";
 
 type BetInput = Omit<
@@ -30,12 +32,19 @@ export function useBankroll() {
     setLoading(true);
     setError(null);
     try {
+      let storedCapital: number | null = null;
+      try {
+        storedCapital = await fetchBankrollSettings();
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to load bankroll settings");
+      }
       const typed = await fetchBankrollBets();
-    const base =
-      typed.length > 0 ? typed[0].starting_capital ?? INITIAL_BANKROLL : INITIAL_BANKROLL;
-    setStartingCapital(base);
-    const recalculated = recomputeSequence(typed, base);
-    setBets(recalculated);
+      const base =
+        storedCapital ??
+        (typed.length > 0 ? typed[0].starting_capital ?? INITIAL_BANKROLL : INITIAL_BANKROLL);
+      setStartingCapital(base);
+      const recalculated = recomputeSequence(typed, base);
+      setBets(recalculated);
     } catch (err: any) {
       setError(err.message ?? "Failed to load bets");
     }
@@ -73,23 +82,39 @@ export function useBankroll() {
         starting_capital: startingCapital,
       };
 
+      const previous = bets;
       const recalculated = recomputeSequence([...bets, newBet], startingCapital);
       setBets(recalculated);
-      await upsertBankrollBets(recalculated);
+      try {
+        await upsertBankrollBets(recalculated);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to save bet");
+        setBets(previous);
+      }
     },
     [bets, startingCapital]
   );
 
   const updateStartingCapital = useCallback(
     async (value: number) => {
+      setError(null);
       setStartingCapital(value);
+      try {
+        await upsertBankrollSettings(value);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to save bankroll settings");
+      }
       if (!bets.length) return;
       const recalculated = recomputeSequence(
         bets.map((b) => ({ ...b, starting_capital: value })),
         value
       );
       setBets(recalculated);
-      await persistSequence(recalculated);
+      try {
+        await persistSequence(recalculated);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to save bets");
+      }
     },
     [bets, persistSequence]
   );
@@ -99,6 +124,7 @@ export function useBankroll() {
       setError(null);
       const existing = bets.find((b) => b.id === id);
       if (!existing) return;
+      const previous = bets;
       const updatedBet: Bet = {
         ...existing,
         ...patch,
@@ -110,7 +136,12 @@ export function useBankroll() {
         startingCapital
       );
       setBets(recalculated);
-      await upsertBankrollBets(recalculated);
+      try {
+        await upsertBankrollBets(recalculated);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to update bet");
+        setBets(previous);
+      }
     },
     [bets, startingCapital]
   );
@@ -118,13 +149,19 @@ export function useBankroll() {
   const deleteBet = useCallback(
     async (id: string) => {
       setError(null);
-      await deleteBankrollBet(id);
-      const recalculated = recomputeSequence(
-        bets.filter((b) => b.id !== id),
-        startingCapital
-      );
-      setBets(recalculated);
-      await persistSequence(recalculated);
+      const previous = bets;
+      try {
+        await deleteBankrollBet(id);
+        const recalculated = recomputeSequence(
+          bets.filter((b) => b.id !== id),
+          startingCapital
+        );
+        setBets(recalculated);
+        await persistSequence(recalculated);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to delete bet");
+        setBets(previous);
+      }
     },
     [bets, persistSequence, startingCapital]
   );

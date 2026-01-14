@@ -8,6 +8,7 @@ type Filters = Partial<SearchFilters>;
 
 const CURRENT_SEASON = 2025;
 const TEAM_CHUNK_SIZE = 500;
+const FIXTURE_PAGE_SIZE = 1000;
 const TOTAL_BADGES = 7;
 const SCORED_THRESHOLD = 1.5;
 const TOTAL_THRESHOLD = 3.5;
@@ -38,6 +39,44 @@ type NextFixture = {
   isHome: boolean;
   opponentId: number;
 };
+
+async function fetchSeasonFixtures(
+  supabase: ReturnType<typeof createClient>,
+  leagueId?: number
+) {
+  const fixtures: any[] = [];
+  let from = 0;
+
+  while (true) {
+    let query = supabase
+      .from("fixtures")
+      .select(
+        "id,date_utc,season,competition_id,home_team_id,away_team_id,goals_home,goals_away,status_short"
+      )
+      .eq("season", CURRENT_SEASON)
+      .eq("status_short", "FT")
+      .not("goals_home", "is", null)
+      .not("goals_away", "is", null)
+      .order("date_utc", { ascending: false });
+
+    if (typeof leagueId === "number") {
+      query = query.eq("competition_id", leagueId);
+    }
+
+    const { data, error } = await query.range(from, from + FIXTURE_PAGE_SIZE - 1);
+    if (error) {
+      return { data: null, error };
+    }
+
+    fixtures.push(...(data ?? []));
+    if (!data || data.length < FIXTURE_PAGE_SIZE) {
+      break;
+    }
+    from += FIXTURE_PAGE_SIZE;
+  }
+
+  return { data: fixtures, error: null };
+}
 
 function chunkArray<T>(items: T[], size: number) {
   if (!items.length || size <= 0) return [];
@@ -383,33 +422,19 @@ export async function POST(req: Request) {
     }
   }
 
-  // 1) Charger toutes les fixtures FT de la saison courante (recent -> ancien)
-  const { data: seasonFixtures, error: fixturesError } = await supabase
-    .from("fixtures")
-    .select(
-      "id,date_utc,season,competition_id,home_team_id,away_team_id,goals_home,goals_away"
-    )
-    .eq("season", CURRENT_SEASON)
-    .eq("status_short", "FT")
-    .not("goals_home", "is", null)
-    .not("goals_away", "is", null)
-    .order("date_utc", { ascending: false });
+  // 1) Charger toutes les fixtures FT de la saison courante pour la ligue
+  const { data: seasonFixtures, error: fixturesError } =
+    await fetchSeasonFixtures(supabase, filters.leagueId);
 
-  if (fixturesError) {
+  if (fixturesError || !seasonFixtures) {
     return NextResponse.json(
-      { ok: false, error: fixturesError.message },
+      { ok: false, error: fixturesError?.message ?? "Fixtures fetch failed" },
       { status: 500 }
     );
   }
 
   const fixturesByTeam = new Map<number, TeamFixture[]>();
   (seasonFixtures ?? []).forEach((f: any) => {
-    if (
-      typeof filters.leagueId === "number" &&
-      Number(f.competition_id) !== filters.leagueId
-    ) {
-      return;
-    }
     if (!f?.date_utc) return;
     const dateValue = getDateValue(f.date_utc);
     if (dateValue == null) return;
@@ -449,6 +474,10 @@ export async function POST(req: Request) {
   if (fixturesByTeam.size === 0) {
     return NextResponse.json({ ok: true, results: [] });
   }
+
+  fixturesByTeam.forEach((list) => {
+    list.sort((a, b) => b.dateValue - a.dateValue);
+  });
 
   const needsBadgeFilter = typeof filters.badgeTarget === "number";
 
@@ -577,12 +606,7 @@ export async function POST(req: Request) {
       ? lastFixture.away_team_id
       : lastFixture.home_team_id;
     const teamMeta = teamIndex.get(teamId);
-    if (
-      typeof filters.leagueId === "number" &&
-      Number(teamMeta?.competition_id) !== filters.leagueId
-    ) {
-      continue;
-    }
+    // Keep league scoping based on fixtures to avoid meta mismatches.
 
     let badgeCount: number | null = null;
     let nextMatchDate: string | null = null;

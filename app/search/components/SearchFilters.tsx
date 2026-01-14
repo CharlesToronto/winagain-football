@@ -149,9 +149,6 @@ export function SearchFilters({
                 })
               )}
             </select>
-            <span className="text-xs text-white/60">
-              Si une ligue est choisie, les criteres s'appliquent uniquement dessus.
-            </span>
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm text-white/70">Condition dernier match</label>
@@ -352,23 +349,20 @@ export function SearchFilters({
                 </option>
               ))}
             </select>
-            <span className="text-xs text-white/60">
-              Filtre les prochains matchs selon le nombre de badges.
-            </span>
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={onSearch}
-            disabled={loading}
-            className={`px-4 py-2 rounded-md text-sm font-semibold ${
-              loading ? "bg-white/20 text-white/60" : "bg-green-600 hover:bg-green-500"
-            }`}
-          >
-            {loading ? "Recherche..." : "Rechercher"}
-          </button>
-        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          onClick={onSearch}
+          disabled={loading}
+          className={`px-4 py-2 rounded-md text-sm font-semibold ${
+            loading ? "bg-white/20 text-white/60" : "bg-green-600 hover:bg-green-500"
+          }`}
+        >
+          {loading ? "Recherche..." : "Rechercher"}
+        </button>
       </div>
     </div>
   );

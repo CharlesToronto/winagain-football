@@ -144,6 +144,15 @@ function normalizeTeamRef(value: any): TeamRef | null {
   return value;
 }
 
+function normalizeFixtureRefs(item: any) {
+  if (!item) return item;
+  return {
+    ...item,
+    teams: normalizeTeamRef(item.teams),
+    opp: normalizeTeamRef(item.opp),
+  };
+}
+
 function buildTeamFixtureMap(
   fixtures: FixtureInput[],
   seasons: number[],
@@ -221,12 +230,29 @@ function buildTeamFixtureMap(
   return map;
 }
 
-function sliceHistory(list: TeamFixture[], cutoff: number, limit?: number | null) {
-  const prior = list.filter((entry) => entry.dateValue < cutoff);
-  if (typeof limit === "number") {
-    return prior.slice(Math.max(0, prior.length - limit));
+function findCutoffIndex(list: TeamFixture[], cutoff: number) {
+  let low = 0;
+  let high = list.length;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (list[mid].dateValue < cutoff) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
   }
-  return prior;
+  return low;
+}
+
+function sliceHistory(list: TeamFixture[], cutoff: number, limit?: number | null) {
+  if (!list.length) return [];
+  const cutoffIndex = findCutoffIndex(list, cutoff);
+  if (cutoffIndex <= 0) return [];
+  if (typeof limit === "number") {
+    const start = Math.max(0, cutoffIndex - limit);
+    return list.slice(start, cutoffIndex);
+  }
+  return list.slice(0, cutoffIndex);
 }
 
 function makeBuckets() {
@@ -264,7 +290,7 @@ export default function ConfidenceView({
         : [Number(seasonFilter)],
     [seasonFilter]
   );
-  const fetchSeasons = [...SEASON_OPTIONS];
+  const fetchSeasons = useMemo(() => [...SEASON_OPTIONS], []);
   const asOfTime = useMemo(() => {
     if (!asOfDate) return null;
     const time = asOfDate.getTime();
@@ -272,6 +298,7 @@ export default function ConfidenceView({
   }, [asOfDate]);
 
   const teamIds = useMemo(() => {
+    if (leagueId != null) return [];
     const ids = new Set<number>();
     const seasonSet = new Set(seasons);
     for (const fixture of fixtures ?? []) {
@@ -295,25 +322,31 @@ export default function ConfidenceView({
 
   useEffect(() => {
     let active = true;
-    async function loadFixtures() {
-      if (scopeFilter === "league") {
-        if (leagueId == null) {
-          setAllFixtures([]);
-          setLoading(false);
-          return;
-        }
-        setLoading(true);
-        const data = await getLeagueFixturesAllSeasons(Number(leagueId));
-        if (!active) return;
-        const normalized = (data ?? []).map((item: any) => ({
-          ...item,
-          teams: normalizeTeamRef(item.teams),
-          opp: normalizeTeamRef(item.opp),
-        }));
-        setAllFixtures(normalized);
+    async function loadLeagueFixtures() {
+      if (leagueId == null) return;
+      const numericLeagueId = Number(leagueId);
+      if (!Number.isFinite(numericLeagueId)) {
+        setAllFixtures([]);
         setLoading(false);
         return;
       }
+      setLoading(true);
+      const data = await getLeagueFixturesAllSeasons(numericLeagueId);
+      if (!active) return;
+      const normalized = (data ?? []).map(normalizeFixtureRefs);
+      setAllFixtures(normalized);
+      setLoading(false);
+    }
+    loadLeagueFixtures();
+    return () => {
+      active = false;
+    };
+  }, [leagueId]);
+
+  useEffect(() => {
+    if (leagueId != null) return;
+    let active = true;
+    async function loadFallbackFixtures() {
       if (!teamIds.length) {
         setAllFixtures([]);
         setLoading(false);
@@ -322,14 +355,15 @@ export default function ConfidenceView({
       setLoading(true);
       const data = await getFixturesForTeamsSeasons(teamIds, fetchSeasons, leagueId);
       if (!active) return;
-      setAllFixtures(data ?? []);
+      const normalized = (data ?? []).map(normalizeFixtureRefs);
+      setAllFixtures(normalized);
       setLoading(false);
     }
-    loadFixtures();
+    loadFallbackFixtures();
     return () => {
       active = false;
     };
-  }, [teamIds, fetchSeasons, leagueId, scopeFilter]);
+  }, [teamIds, fetchSeasons, leagueId]);
 
   useEffect(() => {
     setActiveBadgeCount(null);
@@ -461,13 +495,24 @@ export default function ConfidenceView({
     }
 
     return summary;
-  }, [allFixtures, teamId, seasons, leagueId, range, scopeFilter, asOfTime, seasonFilter]);
+  }, [
+    allFixtures,
+    teamId,
+    seasons,
+    leagueId,
+    range,
+    scopeFilter,
+    asOfTime,
+    seasonFilter,
+    fetchSeasons,
+  ]);
 
   const activeBucket =
     activeBadgeCount != null
       ? analysis.buckets.find((bucket) => bucket.badgeCount === activeBadgeCount) ??
         null
       : null;
+  const hasData = analysis.totalMatches > 0;
 
   return (
     <div className="space-y-6">
@@ -541,11 +586,11 @@ export default function ConfidenceView({
         </div>
       </div>
 
-      {loading ? (
+      {loading && !hasData ? (
         <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-white/80">
           Chargement des fixtures...
         </div>
-      ) : analysis.totalMatches === 0 ? (
+      ) : !hasData ? (
         <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-white/80">
           Aucune donnee disponible pour ce filtre.
         </div>

@@ -76,7 +76,9 @@ export async function getFixturesForTeamsSeasons(
       goals_home,
       goals_away,
       goals_home_ht,
-      goals_away_ht
+      goals_away_ht,
+      teams:home_team_id ( id, name, logo ),
+      opp:away_team_id ( id, name, logo )
     `)
     .or(`home_team_id.in.(${idList}),away_team_id.in.(${idList})`)
     .in("season", seasons);
