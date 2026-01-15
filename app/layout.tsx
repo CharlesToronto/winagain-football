@@ -2,6 +2,7 @@ import "./globals.css";
 import Sidebar from "./components/layout/Sidebar";
 import MobileNav from "./components/layout/MobileNav";
 import FavoritesBubbles from "./components/FavoritesBubbles";
+import CibleFab from "./components/cible/CibleFab";
 import { ReactNode } from "react";
 
 export const metadata = {
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         <MobileNav />
         <FavoritesBubbles />
+        <CibleFab />
       </body>
     </html>
   );

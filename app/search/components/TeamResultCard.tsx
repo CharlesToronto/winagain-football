@@ -19,13 +19,13 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
       </div>
 
       <div className="text-sm text-white/80">
-        <div>Dernier match : {new Date(team.lastMatchDate).toLocaleString("fr-FR")}</div>
-        <div>Adversaire : {team.opponent}</div>
-        {team.nextMatchDate ? (
-          <div>
-            Prochain match : {new Date(team.nextMatchDate).toLocaleString("fr-FR")}{team.nextOpponent ? ` vs ${team.nextOpponent}` : ""}
-          </div>
-        ) : null}
+        <div>
+          Prochain match :{" "}
+          {team.nextMatchDate
+            ? new Date(team.nextMatchDate).toLocaleString("fr-FR")
+            : "--"}
+          {team.nextOpponent ? ` vs ${team.nextOpponent}` : ""}
+        </div>
         {team.badgeCount != null ? (
           <div>Badges prochain match : {team.badgeCount}/7</div>
         ) : null}

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems } from "./navItems";
+import CiblePanel from "@/app/components/cible/CiblePanel";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -37,6 +38,12 @@ export default function Sidebar() {
           );
         })}
       </nav>
+      <div className="mt-6">
+        <CiblePanel />
+      </div>
+      <div className="mt-auto pt-6">
+        <div id="sidebar-tools" />
+      </div>
     </div>
   );
 }

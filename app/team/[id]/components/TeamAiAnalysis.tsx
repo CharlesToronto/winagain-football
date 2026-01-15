@@ -41,6 +41,11 @@ const CHAT_CACHE_TTL_MS = 60 * 60 * 1000;
 const MAX_CHAT_MESSAGES = 12;
 const AI_FIXTURES_LIMIT = 50;
 const PENDING_PROMPT_KEY = "team-ai-pending-prompt";
+const PLACEHOLDER_VARIANTS = [
+  "Ecris ta question",
+  "Demande moi une analyse",
+  "Tu veux mon avis sur une tendance?",
+];
 
 function createMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -62,6 +67,20 @@ function getFixtureTimestamp(fixture: any) {
   }
   const time = new Date(raw).getTime();
   return Number.isFinite(time) ? time : 0;
+}
+
+function getFixtureTeamIds(fixture: any) {
+  const homeId =
+    fixture?.home_team_id ??
+    fixture?.fixture?.teams?.home?.id ??
+    fixture?.teams?.home?.id ??
+    null;
+  const awayId =
+    fixture?.away_team_id ??
+    fixture?.fixture?.teams?.away?.id ??
+    fixture?.teams?.away?.id ??
+    null;
+  return { homeId, awayId };
 }
 
 function normalizeFixtures(fixtures: any[], teamId: number, limit = AI_FIXTURES_LIMIT) {
@@ -93,19 +112,30 @@ function buildAiFixtures(fixtures: any[], teamId?: number | null) {
     const opponent = isHome
       ? f.away_team_name ?? f.opp?.name ?? null
       : f.home_team_name ?? f.teams?.name ?? null;
+    const totalGoals = Number(goalsFor ?? 0) + Number(goalsAgainst ?? 0);
+    const result = goalsFor > goalsAgainst ? "W" : goalsFor < goalsAgainst ? "L" : "D";
     return {
       date: f.date_utc ?? f.date ?? f.fixture?.date ?? null,
       isHome,
       opponent,
       goalsFor,
       goalsAgainst,
-      totalGoals: Number(goalsFor ?? 0) + Number(goalsAgainst ?? 0),
+      totalGoals,
+      result,
+      flags: {
+        over35: totalGoals > 3.5,
+        under35: totalGoals <= 3.5,
+        draw: goalsFor === goalsAgainst,
+        btts: Number(goalsFor ?? 0) > 0 && Number(goalsAgainst ?? 0) > 0,
+      },
     };
   });
 }
 
 function stripMathFromText(text: string) {
   let cleaned = text ?? "";
+  cleaned = cleaned.replace(/<\/?trend>/g, "");
+  cleaned = cleaned.replace(/^\s*[-*]\s*Encha[iî]nements?\s+r[eé]cents?\s*:?\s*$/gim, "");
   cleaned = cleaned.replace(/\\\[[\s\S]*?\\\]/g, "");
   cleaned = cleaned.replace(/\\\([\s\S]*?\\\)/g, "");
   cleaned = cleaned.replace(/\\(frac|left|right|times|approx|text)\b[^\n]*/g, "");
@@ -265,27 +295,44 @@ function renderAiContent(text: string) {
           );
         }
         if (block.type === "ul") {
+          const items: React.ReactNode[] = [];
+          let pendingTitle: string | null = null;
+
+          block.items.forEach((item, itemIdx) => {
+            const trimmed = item.trim();
+            const isTitleOnly =
+              trimmed.endsWith(":") && trimmed.replace(/[:\s]/g, "").length > 0;
+            if (isTitleOnly) {
+              pendingTitle = trimmed.slice(0, -1).trim();
+              return;
+            }
+
+            const { title, body } = splitKeyPointItem(item);
+            const resolvedTitle = title ?? pendingTitle;
+            pendingTitle = null;
+            items.push(
+              <li
+                key={`ul-${idx}-${itemIdx}`}
+                className="rounded-lg border border-white/10 bg-black/35 p-3 leading-snug"
+              >
+                {resolvedTitle ? (
+                  <div className="text-xs uppercase tracking-wide text-white/60">
+                    {renderInlineText(resolvedTitle)}
+                  </div>
+                ) : null}
+                <div className={resolvedTitle ? "mt-1" : ""}>
+                  {renderInlineText(body)}
+                </div>
+              </li>
+            );
+          });
+
           return (
             <ul
               key={`ul-${idx}`}
-              className="space-y-1 text-white/90 list-none sm:list-disc sm:list-inside"
+              className="grid gap-2 text-white/90 list-none sm:grid-cols-2"
             >
-              {block.items.map((item, itemIdx) => {
-                const { title, body } = splitKeyPointItem(item);
-                return (
-                  <li key={`ul-${idx}-${itemIdx}`} className="leading-snug">
-                    <div className="flex flex-col gap-1 sm:hidden">
-                      {title ? (
-                        <span className="text-sky-300 font-semibold">
-                          {renderInlineText(title)}
-                        </span>
-                      ) : null}
-                      <span>{renderInlineText(body)}</span>
-                    </div>
-                    <div className="hidden sm:block">{renderInlineText(item)}</div>
-                  </li>
-                );
-              })}
+              {items}
             </ul>
           );
         }
@@ -346,11 +393,20 @@ export default function TeamAiAnalysis({
   const [fullFixtures, setFullFixtures] = useState<any[]>([]);
   const [fullOpponentFixtures, setFullOpponentFixtures] = useState<any[]>([]);
   const [isAnalysisCollapsed, setIsAnalysisCollapsed] = useState(false);
+  const [animatedPlaceholder, setAnimatedPlaceholder] = useState(
+    PLACEHOLDER_VARIANTS[0]
+  );
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const hasAutoCollapsedRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
   const pendingPromptRef = useRef<string | null>(null);
   const hasSentPendingRef = useRef(false);
+  const placeholderStateRef = useRef({
+    index: 0,
+    char: 0,
+    direction: 1,
+    pause: 6,
+  });
 
   const { engines, computeStreaks } = getProbabilityEngines();
   const computeEngine = engines[filter];
@@ -389,6 +445,33 @@ export default function TeamAiAnalysis({
   const opponentRecentFixtures = useMemo(
     () => buildAiFixtures(fullOpponentFixtures ?? [], nextOpponentId),
     [fullOpponentFixtures, nextOpponentId]
+  );
+  const h2hRawFixtures = useMemo(() => {
+    const teamId = Number(team?.id);
+    const opponentId = Number(nextOpponentId);
+    if (!Number.isFinite(teamId) || !Number.isFinite(opponentId)) return [];
+    const matches = (fullFixtures ?? []).filter((fixture) => {
+      const { homeId, awayId } = getFixtureTeamIds(fixture);
+      if (!homeId || !awayId) return false;
+      return (
+        (homeId === teamId && awayId === opponentId) ||
+        (homeId === opponentId && awayId === teamId)
+      );
+    });
+    matches.sort((a, b) => getFixtureTimestamp(b) - getFixtureTimestamp(a));
+    return matches.slice(0, 20);
+  }, [fullFixtures, team?.id, nextOpponentId]);
+  const h2hFixtures = useMemo(
+    () => buildAiFixtures(h2hRawFixtures ?? [], team?.id),
+    [h2hRawFixtures, team?.id]
+  );
+  const h2hStats = useMemo(
+    () => (h2hRawFixtures.length ? computeEngine(h2hRawFixtures) : null),
+    [computeEngine, h2hRawFixtures]
+  );
+  const h2hStreaks = useMemo(
+    () => (h2hRawFixtures.length ? computeStreaks(h2hRawFixtures) : null),
+    [computeStreaks, h2hRawFixtures]
   );
 
   useEffect(() => {
@@ -473,6 +556,10 @@ export default function TeamAiAnalysis({
       opponentRecentStats: opponentFullStats,
       opponentRecentStreaks: opponentFullStreaks,
       opponentRecentFixtures,
+      h2hFixturesCount: h2hFixtures?.length ?? 0,
+      h2hFixtures,
+      h2hStats,
+      h2hStreaks,
     }),
     [
       filter,
@@ -494,6 +581,9 @@ export default function TeamAiAnalysis({
       opponentFullStats,
       opponentFullStreaks,
       opponentRecentFixtures,
+      h2hFixtures,
+      h2hStats,
+      h2hStreaks,
     ]
   );
 
@@ -558,6 +648,50 @@ export default function TeamAiAnalysis({
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    let active = true;
+    let timeout: number | null = null;
+
+    const tick = () => {
+      if (!active) return;
+      const state = placeholderStateRef.current;
+      const phrase = PLACEHOLDER_VARIANTS[state.index];
+
+      if (state.pause > 0) {
+        state.pause -= 1;
+        timeout = window.setTimeout(tick, 200);
+        return;
+      }
+
+      if (state.direction === 1) {
+        state.char += 1;
+        if (state.char >= phrase.length) {
+          state.char = phrase.length;
+          state.direction = -1;
+          state.pause = 8;
+        }
+      } else {
+        state.char -= 1;
+        if (state.char <= 0) {
+          state.char = 0;
+          state.direction = 1;
+          state.index = (state.index + 1) % PLACEHOLDER_VARIANTS.length;
+          state.pause = 4;
+        }
+      }
+
+      const next = phrase.slice(0, state.char);
+      setAnimatedPlaceholder(next || " ");
+      timeout = window.setTimeout(tick, state.direction === 1 ? 70 : 40);
+    };
+
+    timeout = window.setTimeout(tick, 400);
+    return () => {
+      active = false;
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, []);
 
   useEffect(() => {
     const container = chatScrollRef.current;
@@ -723,12 +857,12 @@ export default function TeamAiAnalysis({
   }, [analysis, streaming]);
 
   return (
-    <div className="max-w-5xl">
-      <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-white space-y-4">
+    <div className="w-full">
+      <div className="rounded-xl p-6 text-white space-y-4 bg-[linear-gradient(135deg,_#1a3cff_0%,_#2d5bff_20%,_#3556b8_36%,_#6f6bd6_52%,_#f06bc5_70%,_#ff4f70_84%,_#ff6a2d_100%)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
+          <div className="w-full flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-start">
             <CharlyLottie className="w-12 h-12 shrink-0" />
-            <div>
+            <div className="text-center sm:text-left">
               <h2 className="text-lg font-semibold">Charly IA</h2>
               <p className="text-xs text-white/70">By WinAgain Pronostic</p>
             </div>
@@ -738,7 +872,9 @@ export default function TeamAiAnalysis({
             onClick={handleAnalyze}
             disabled={loading}
             className={`px-4 py-2 rounded-md text-sm font-semibold ${
-              loading ? "bg-white/20 text-white/60" : "bg-green-600 hover:bg-green-500"
+              loading
+                ? "bg-white/20 text-white/60"
+                : "bg-transparent border border-white/60 text-white/90 hover:bg-white/10"
             }`}
           >
             {loading ? "Analyse..." : "Analyser"}
@@ -789,46 +925,26 @@ export default function TeamAiAnalysis({
               </div>
             ) : null}
           </div>
-        ) : (
-          <div className="text-sm text-white/60">
-            Clique sur Analyser pour obtenir le bilan de l'equipe et du prochain adversaire.
-          </div>
-        )}
+        ) : null}
 
         <div className="border-t border-white/10 pt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Chat IA</h3>
-            <span className="text-[11px] text-white/50">
-              Cache local 1h
-              {cacheTimestamp
-                ? ` | MAJ ${new Date(cacheTimestamp).toLocaleTimeString("fr-FR")}`
-                : ""}
-            </span>
-          </div>
-
           <div className="max-h-80 overflow-y-auto space-y-3 pr-1" ref={chatScrollRef}>
-            {messages.length === 0 ? (
-              <div className="text-xs text-white/60">
-                Pose une question sur l'analyse (ex: forces, faiblesses, points cle).
-              </div>
-            ) : (
-              messages.map((msg) => (
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
                 <div
-                  key={msg.id}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`w-full sm:w-[60%] rounded-xl px-4 py-3 text-sm break-words leading-snug ${
+                    msg.role === "user"
+                      ? "bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-white text-right"
+                      : "bg-transparent text-emerald-50 text-left"
+                  }`}
                 >
-                  <div
-                    className={`w-full sm:w-[60%] rounded-xl px-4 py-3 text-sm break-words leading-snug ${
-                      msg.role === "user"
-                        ? "bg-gradient-to-br from-sky-500/20 to-indigo-500/20 text-white text-right"
-                        : "bg-transparent text-emerald-50 text-left"
-                    }`}
-                  >
-                    {msg.role === "assistant" ? renderAiContent(msg.content) : msg.content}
-                  </div>
+                  {msg.role === "assistant" ? renderAiContent(msg.content) : msg.content}
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
 
           {chatError ? (
@@ -838,25 +954,44 @@ export default function TeamAiAnalysis({
           ) : null}
 
           <form onSubmit={handleSend} className="flex flex-col sm:flex-row gap-2">
-            <textarea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="Ecris ta question..."
-              rows={2}
-              className="flex-1 rounded-md bg-black/30 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-emerald-400/60"
-              disabled={streaming}
-            />
-            <button
-              type="submit"
-              disabled={streaming || !analysis}
-              className={`px-4 py-2 rounded-md text-sm font-semibold ${
-                streaming || !analysis
-                  ? "bg-white/20 text-white/50"
-                  : "bg-emerald-500 hover:bg-emerald-400 text-white"
-              }`}
-            >
-              {streaming ? "Envoi..." : "Envoyer"}
-            </button>
+            <div className="relative flex-1">
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder={animatedPlaceholder}
+                rows={4}
+                className="w-full rounded-md bg-black/70 border border-white/10 px-3 py-2 pr-12 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-emerald-400/60"
+                disabled={streaming}
+              />
+              <button
+                type="submit"
+                disabled={streaming || !analysis}
+                aria-label="Envoyer"
+                className={`absolute top-1/2 -translate-y-1/2 right-2 w-9 h-9 rounded-md text-sm font-semibold flex items-center justify-center ${
+                  streaming || !analysis
+                    ? "bg-white/20 text-white/50"
+                    : "bg-emerald-500 hover:bg-emerald-400 text-white"
+                }`}
+              >
+                {streaming ? (
+                  "..."
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M22 2L11 13" />
+                    <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>

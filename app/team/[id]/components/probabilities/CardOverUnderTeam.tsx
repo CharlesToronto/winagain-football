@@ -106,6 +106,9 @@ export default function CardOverUnderTeam({
   };
 
   const resolvedTeamName = teamName && teamName.trim() ? teamName : "Equipe";
+  const selectionCategory = `Over / Under ${resolvedTeamName} (${
+    goalFocus === "for" ? "Marques" : "Encaisses"
+  })`;
 
   return (
     <div className="bg-sky-400/10 backdrop-blur-sm rounded-xl p-6 shadow h-[20rem]">
@@ -130,22 +133,24 @@ export default function CardOverUnderTeam({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <StatRow label="+0.5" count={`(${val(over["0.5"]).raw}/${total})`} percentGreen={`${val(over["0.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["0.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "0.5")} />
-          <StatRow label="+1.5" count={`(${val(over["1.5"]).raw}/${total})`} percentGreen={`${val(over["1.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["1.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "1.5")} />
-          <StatRow label="+2.5" count={`(${val(over["2.5"]).raw}/${total})`} percentGreen={`${val(over["2.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["2.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "2.5")} />
-          <StatRow label="+3.5" count={`(${val(over["3.5"]).raw}/${total})`} percentGreen={`${val(over["3.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["3.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "3.5")} />
-          <StatRow label="+4.5" count={`(${val(over["4.5"]).raw}/${total})`} percentGreen={`${val(over["4.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["4.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "4.5")} />
-          <StatRow label="+5.5" count={`(${val(over["5.5"]).raw}/${total})`} percentGreen={`${val(over["5.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["5.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "5.5")} />
+          <StatRow label="+0.5" count={`(${val(over["0.5"]).raw}/${total})`} percentGreen={`${val(over["0.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["0.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "0.5")} selectionCategory={selectionCategory} />
+          <StatRow label="+1.5" count={`(${val(over["1.5"]).raw}/${total})`} percentGreen={`${val(over["1.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["1.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "1.5")} selectionCategory={selectionCategory} />
+          <StatRow label="+2.5" count={`(${val(over["2.5"]).raw}/${total})`} percentGreen={`${val(over["2.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["2.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "2.5")} selectionCategory={selectionCategory} />
+          <StatRow label="+3.5" count={`(${val(over["3.5"]).raw}/${total})`} percentGreen={`${val(over["3.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["3.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "3.5")} selectionCategory={selectionCategory} />
+          <StatRow label="+4.5" count={`(${val(over["4.5"]).raw}/${total})`} percentGreen={`${val(over["4.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["4.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "4.5")} selectionCategory={selectionCategory} />
+          <StatRow label="+5.5" count={`(${val(over["5.5"]).raw}/${total})`} percentGreen={`${val(over["5.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentOver["5.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("over", "5.5")} selectionCategory={selectionCategory} />
         </div>
         <div className="space-y-1">
-          <StatRow label="-0.5" count={`(${val(under["0.5"]).raw}/${total})`} percentGreen={`${val(under["0.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["0.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "0.5")} />
-          <StatRow label="-1.5" count={`(${val(under["1.5"]).raw}/${total})`} percentGreen={`${val(under["1.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["1.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "1.5")} />
-          <StatRow label="-2.5" count={`(${val(under["2.5"]).raw}/${total})`} percentGreen={`${val(under["2.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["2.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "2.5")} />
-          <StatRow label="-3.5" count={`(${val(under["3.5"]).raw}/${total})`} percentGreen={`${val(under["3.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["3.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "3.5")} />
-          <StatRow label="-4.5" count={`(${val(under["4.5"]).raw}/${total})`} percentGreen={`${val(under["4.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["4.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "4.5")} />
-          <StatRow label="-5.5" count={`(${val(under["5.5"]).raw}/${total})`} percentGreen={`${val(under["5.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["5.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "5.5")} />
+          <StatRow label="-0.5" count={`(${val(under["0.5"]).raw}/${total})`} percentGreen={`${val(under["0.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["0.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "0.5")} selectionCategory={selectionCategory} />
+          <StatRow label="-1.5" count={`(${val(under["1.5"]).raw}/${total})`} percentGreen={`${val(under["1.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["1.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "1.5")} selectionCategory={selectionCategory} />
+          <StatRow label="-2.5" count={`(${val(under["2.5"]).raw}/${total})`} percentGreen={`${val(under["2.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["2.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "2.5")} selectionCategory={selectionCategory} />
+          <StatRow label="-3.5" count={`(${val(under["3.5"]).raw}/${total})`} percentGreen={`${val(under["3.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["3.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "3.5")} selectionCategory={selectionCategory} />
+          <StatRow label="-4.5" count={`(${val(under["4.5"]).raw}/${total})`} percentGreen={`${val(under["4.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["4.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "4.5")} selectionCategory={selectionCategory} />
+          <StatRow label="-5.5" count={`(${val(under["5.5"]).raw}/${total})`} percentGreen={`${val(under["5.5"]).percent}%`} percentOrange={showOpponent ? `${val(opponentUnder["5.5"]).percent}%` : undefined} percentBlue="-" highlight={shouldHighlight("under", "5.5")} selectionCategory={selectionCategory} />
         </div>
       </div>
     </div>
   );
 }
+
+

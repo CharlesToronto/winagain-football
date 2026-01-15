@@ -62,10 +62,12 @@ export async function POST(req: Request) {
   const systemPrompt =
     "Tu es un analyste football. Reponds en francais, concis, utile, " +
     "en te basant sur le contexte. " +
+    "Priorise la recherche d'enchainements (2+ matchs consecutifs, 2/3/4/5...) et " +
+    "les opportunites de contre-tendance quand elles sont justifiees. " +
     "Si l'utilisateur demande une liste, reponds en liste Markdown. " +
     "Utilise des titres en Markdown (##) quand tu structures la reponse. " +
     "Si une info manque, dis-le clairement. " +
-    "Si pertinent, mets en avant les stats entre 70-100% ou 0-30%. " +
+    "Si pertinent, mets en avant uniquement les stats entre 68% et 100%. " +
     "Les listes de matchs sont ordonnees du plus recent au plus ancien. " +
     "Utilise recentFixtures/recentStats (50 matchs) pour les comparaisons si besoin.";
 

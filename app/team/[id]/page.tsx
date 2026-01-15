@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
@@ -12,11 +13,13 @@ import TeamAiAnalysis from "./components/TeamAiAnalysis";
 import LeagueStatsView from "./components/league/LeagueStatsView";
 import OddsConverter from "@/app/home/components/OddsConverter";
 import StandingsList from "@/app/league/[id]/StandingsList";
+import { CibleProvider } from "@/app/components/cible/CibleContext";
 import computeFT from "@/lib/analysisEngine/computeFT";
 import { loadTeamData, TeamAdapterResult } from "@/lib/adapters/team";
 import { FAVORITES_STORAGE_KEY, type FavoriteTeam } from "@/lib/favorites";
 import { fetchApi } from "@/lib/football";
 import { getTeamFixturesAllSeasons } from "@/lib/queries/fixtures";
+import { CIBLE_ACTIVE_KEY } from "@/lib/cible";
 
 type StatsState = Record<string, any> | null;
 type TeamData = Record<string, any> | null;
@@ -67,9 +70,11 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const [showOpponentComparison, setShowOpponentComparison] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [sidebarToolsTarget, setSidebarToolsTarget] = useState<HTMLElement | null>(null);
   const [calendarFixtures, setCalendarFixtures] = useState<FixtureItem[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [cibleActive, setCibleActive] = useState(false);
   const copyTimeoutRef = useRef<number | null>(null);
   const opponentToggleTimeoutRef = useRef<number | null>(null);
   const tabParam = searchParams.get("tab");
@@ -133,6 +138,22 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     Number.isFinite(teamId) && effectiveNextMatch?.teams?.home?.id != null
       ? effectiveNextMatch.teams.home.id === teamId
       : null;
+  const cibleMatch = useMemo(() => {
+    if (!effectiveNextMatch) return null;
+    const fixture = effectiveNextMatch.fixture ?? {};
+    const home = effectiveNextMatch.teams?.home ?? null;
+    const away = effectiveNextMatch.teams?.away ?? null;
+    return {
+      fixtureId: fixture.id ?? null,
+      fixtureDate: fixture.date ?? null,
+      home: home
+        ? { id: home.id ?? null, name: home.name ?? null, logo: home.logo ?? null }
+        : null,
+      away: away
+        ? { id: away.id ?? null, name: away.name ?? null, logo: away.logo ?? null }
+        : null,
+    };
+  }, [effectiveNextMatch]);
 
   useEffect(() => {
     try {
@@ -164,6 +185,24 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   }, [favorites]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      setCibleActive(localStorage.getItem(CIBLE_ACTIVE_KEY) === "true");
+    } catch {
+      setCibleActive(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(CIBLE_ACTIVE_KEY, String(cibleActive));
+    } catch {
+      // Ignore storage failures (private mode, blocked storage, etc.)
+    }
+  }, [cibleActive]);
+
+  useEffect(() => {
     if (tabParam === "stats") {
       setTab("stats");
     } else if (tabParam === "dashboard") {
@@ -187,6 +226,11 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     if (!isMobile) {
       setActionsOpen(true);
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    setSidebarToolsTarget(document.getElementById("sidebar-tools"));
   }, []);
 
   useEffect(() => {
@@ -343,6 +387,9 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     : "Aucun match de stats 70-99%";
   const trendSignalTitle = trendSignalDetails.title;
   const copyTitle = "Copier le nom (clic) - Copier le match (double clic)";
+  const cibleTitle = cibleActive
+    ? "Cible active (clic pour desactiver)"
+    : "Activer l'outil Cible";
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -430,225 +477,293 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     ? format(asOfDate, "dd MMM yyyy", { locale: enUS })
     : null;
 
+  const toolsButtons = (
+    <>
+      <div
+        className={`w-9 h-9 md:w-full md:h-8 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center md:justify-start md:gap-2 md:px-2 transition ${
+          trendSignalActive
+            ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+            : "text-white/90"
+        }`}
+        role="img"
+        aria-label={trendSignalTitle}
+        title={trendSignalTitle}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 19V5m0 0l-6 6m6-6l6 6"
+          />
+        </svg>
+        <span className="hidden md:inline-flex text-xs text-white/70 whitespace-nowrap">
+          Signal
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (!overUnderMatchActive) return;
+          setOverUnderHighlight((prev) => !prev);
+        }}
+        aria-disabled={!overUnderMatchActive}
+        aria-pressed={overUnderHighlight}
+        aria-label={overUnderTitle}
+        title={overUnderTitle}
+        className={`w-9 h-9 md:w-full md:h-8 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center md:justify-start md:gap-2 md:px-2 transition ${
+          overUnderHighlight
+            ? "text-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
+            : overUnderMatchActive
+            ? "text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.7)]"
+            : "text-white/70"
+        }`}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden
+        >
+          <circle cx="11" cy="11" r="6" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.5 16.5L21 21"
+          />
+        </svg>
+        <span className="hidden md:inline-flex text-xs whitespace-nowrap">Over / Under</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setCibleActive((prev) => !prev)}
+        aria-pressed={cibleActive}
+        aria-label={cibleTitle}
+        title={cibleTitle}
+        className={`w-9 h-9 md:w-full md:h-8 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center md:justify-start md:gap-2 md:px-2 transition ${
+          cibleActive
+            ? "text-blue-200 shadow-[0_0_12px_rgba(59,130,246,0.7)]"
+            : "text-white/80 hover:bg-white/20"
+        }`}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
+        <span className="hidden md:inline-flex text-xs whitespace-nowrap">Cible</span>
+      </button>
+      <button
+        type="button"
+        onClick={handleOpponentToggleClick}
+        onDoubleClick={handleOpponentToggleDoubleClick}
+        disabled={!opponentToggleActive}
+        aria-disabled={!opponentToggleActive}
+        aria-pressed={showOpponentComparison}
+        aria-label={opponentToggleTitle}
+        title={opponentToggleTitle}
+        className={`w-9 h-9 md:w-full md:h-8 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center md:justify-start md:gap-2 md:px-2 transition disabled:cursor-not-allowed ${
+          showOpponentComparison
+            ? "text-orange-300 shadow-[0_0_12px_rgba(251,146,60,0.7)]"
+            : opponentToggleActive
+            ? "text-orange-200 hover:bg-white/20"
+            : "text-white/50"
+        }`}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M4 20l6-2 8-8-4-4-8 8-2 6z"
+          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M14 6l4 4" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 21l3-3" />
+        </svg>
+        <span className="hidden md:inline-flex text-xs whitespace-nowrap">
+          Adversaire
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setCalendarOpen(true)}
+        aria-label="Calendrier des matchs"
+        title="Calendrier des matchs"
+        className={`w-9 h-9 md:w-full md:h-8 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center md:justify-start md:gap-2 md:px-2 transition ${
+          asOfDate
+            ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
+            : "text-white/90 hover:bg-white/20"
+        }`}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden
+        >
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M8 3v4M16 3v4M3 9h18" />
+        </svg>
+        <span className="hidden md:inline-flex text-xs whitespace-nowrap">
+          Calendrier
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={toggleFavorite}
+        aria-pressed={isFavorite}
+        aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+        title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+        className="w-9 h-9 md:w-full md:h-8 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition flex items-center justify-center md:justify-start md:gap-2 md:px-2"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill={isFavorite ? "#facc15" : "none"}
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M11.48 3.5a.7.7 0 0 1 1.04 0l2.36 2.4c.2.2.46.32.74.35l3.33.5a.7.7 0 0 1 .39 1.2l-2.4 2.35a.7.7 0 0 0-.2.62l.58 3.3a.7.7 0 0 1-1.01.74l-2.98-1.56a.7.7 0 0 0-.65 0l-2.98 1.56a.7.7 0 0 1-1.01-.74l.58-3.3a.7.7 0 0 0-.2-.62L4.8 7.95a.7.7 0 0 1 .39-1.2l3.33-.5a.7.7 0 0 0 .74-.35l2.36-2.4Z"
+          />
+        </svg>
+        <span className="hidden md:inline-flex text-xs whitespace-nowrap">
+          Favoris
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={handleCopyClick}
+        onDoubleClick={handleCopyDoubleClick}
+        className={`w-9 h-9 md:w-full md:h-8 rounded-full bg-white/15 border border-white/20 hover:bg-white/25 flex items-center justify-center md:justify-start md:gap-2 md:px-2 backdrop-blur-sm transition ${
+          copied
+            ? "text-white shadow-[0_0_12px_rgba(255,255,255,0.6)]"
+            : "text-white/80 hover:text-white"
+        }`}
+        title={copyTitle}
+        aria-label={copyTitle}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 md:w-4 md:h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8 3h7l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+          />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 3v4h4" />
+        </svg>
+        <span className="hidden md:inline-flex text-xs whitespace-nowrap">
+          Copier
+        </span>
+      </button>
+    </>
+  );
+
+  const toolsToggleButton = (
+    <button
+      type="button"
+      onClick={() => setActionsOpen((prev) => !prev)}
+      aria-expanded={actionsOpen}
+      aria-label="Outils"
+      title="Outils"
+      className={`w-9 h-9 md:w-full md:h-8 rounded-full border border-white/10 backdrop-blur-sm flex items-center justify-center md:justify-start md:gap-2 md:px-2 transition ${
+        actionsOpen
+          ? "bg-white/20 text-white shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+          : "bg-white/10 text-white/90 hover:bg-white/20"
+      }`}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="w-5 h-5 md:w-4 md:h-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        aria-hidden
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M21.7 19.3l-5.6-5.6a5 5 0 0 0-6.4-6.4l3.2 3.2-2.8 2.8-3.2-3.2a5 5 0 0 0 6.4 6.4l5.6 5.6a1 1 0 0 0 1.4-1.4z"
+        />
+      </svg>
+      <span className="hidden md:inline-flex text-xs whitespace-nowrap">Outils</span>
+    </button>
+  );
+
+  const mobileTools = (
+    <div className="fixed bottom-24 right-4 flex flex-wrap items-center justify-end gap-2 z-50 max-w-[90vw] md:hidden mobile-actions">
+      <div
+        className={`${
+          actionsOpen ? "flex" : "hidden"
+        } flex-wrap items-center justify-end gap-2`}
+      >
+        {toolsButtons}
+      </div>
+      {toolsToggleButton}
+    </div>
+  );
+
+  const sidebarTools = sidebarToolsTarget
+    ? createPortal(
+        <div className="flex flex-col items-start gap-3 text-white w-full">
+          <div
+            className={`${
+              actionsOpen ? "flex" : "hidden"
+            } flex-col items-start gap-2 w-full`}
+          >
+            {toolsButtons}
+          </div>
+          {toolsToggleButton}
+        </div>,
+        sidebarToolsTarget
+      )
+    : null;
+
   if (loading) return <p className="p-6 text-white">Chargement...</p>;
   if (!team) return <p className="p-6 text-white">Aucune donnAce trouvAce.</p>;
 
   return (
-    <div className="min-h-screen w-full p-6 text-white relative">
-      <div className="fixed bottom-24 right-4 flex flex-wrap items-center justify-end gap-2 z-50 max-w-[90vw] md:top-6 md:right-6 md:bottom-auto mobile-actions">
-        <div
-          className={`${
-            actionsOpen ? "flex" : "hidden"
-          } flex-wrap items-center justify-end gap-2`}
-        >
-          <div
-            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-              trendSignalActive
-                ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-                : "text-white/90"
-            }`}
-            role="img"
-            aria-label={trendSignalTitle}
-            title={trendSignalTitle}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 19V5m0 0l-6 6m6-6l6 6"
-              />
-            </svg>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (!overUnderMatchActive) return;
-              setOverUnderHighlight((prev) => !prev);
-            }}
-            aria-disabled={!overUnderMatchActive}
-            aria-pressed={overUnderHighlight}
-            aria-label={overUnderTitle}
-            title={overUnderTitle}
-            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-              overUnderHighlight
-                ? "text-yellow-300 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
-                : overUnderMatchActive
-                ? "text-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.7)]"
-                : "text-white/70"
-            }`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              aria-hidden
-            >
-              <circle cx="11" cy="11" r="6" />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16.5 16.5L21 21"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={handleOpponentToggleClick}
-            onDoubleClick={handleOpponentToggleDoubleClick}
-            disabled={!opponentToggleActive}
-            aria-disabled={!opponentToggleActive}
-            aria-pressed={showOpponentComparison}
-            aria-label={opponentToggleTitle}
-            title={opponentToggleTitle}
-            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition disabled:cursor-not-allowed ${
-              showOpponentComparison
-                ? "text-orange-300 shadow-[0_0_12px_rgba(251,146,60,0.7)]"
-                : opponentToggleActive
-                ? "text-orange-200 hover:bg-white/20"
-                : "text-white/50"
-            }`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 20l6-2 8-8-4-4-8 8-2 6z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M14 6l4 4"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 21l3-3"
-              />
-            </svg>
-          </button>
-          <span className="h-6 w-[2px] bg-white/30" aria-hidden />
-          <button
-            type="button"
-            onClick={() => setCalendarOpen(true)}
-            aria-label="Calendrier des matchs"
-            title="Calendrier des matchs"
-            className={`w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-              asOfDate
-                ? "text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.7)]"
-                : "text-white/90 hover:bg-white/20"
-            }`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              aria-hidden
-            >
-              <rect x="3" y="5" width="18" height="16" rx="2" />
-              <path d="M8 3v4M16 3v4M3 9h18" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={toggleFavorite}
-            aria-pressed={isFavorite}
-            aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-            title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-            className="w-9 h-9 rounded-full bg-white/10 border border-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition flex items-center justify-center"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-              fill={isFavorite ? "#facc15" : "none"}
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M11.48 3.5a.7.7 0 0 1 1.04 0l2.36 2.4c.2.2.46.32.74.35l3.33.5a.7.7 0 0 1 .39 1.2l-2.4 2.35a.7.7 0 0 0-.2.62l.58 3.3a.7.7 0 0 1-1.01.74l-2.98-1.56a.7.7 0 0 0-.65 0l-2.98 1.56a.7.7 0 0 1-1.01-.74l.58-3.3a.7.7 0 0 0-.2-.62L4.8 7.95a.7.7 0 0 1 .39-1.2l3.33-.5a.7.7 0 0 0 .74-.35l2.36-2.4Z"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={handleCopyClick}
-            onDoubleClick={handleCopyDoubleClick}
-            className={`w-9 h-9 rounded-full bg-white/15 border border-white/20 hover:bg-white/25 flex items-center justify-center backdrop-blur-sm transition ${
-              copied
-                ? "text-white shadow-[0_0_12px_rgba(255,255,255,0.6)]"
-                : "text-white/80 hover:text-white"
-            }`}
-            title={copyTitle}
-            aria-label={copyTitle}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 3h7l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 3v4h4"
-              />
-            </svg>
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => setActionsOpen((prev) => !prev)}
-          aria-expanded={actionsOpen}
-          aria-label="Outils"
-          title="Outils"
-          className={`w-9 h-9 rounded-full border border-white/10 backdrop-blur-sm flex items-center justify-center transition ${
-            actionsOpen
-              ? "bg-white/20 text-white shadow-[0_0_12px_rgba(255,255,255,0.4)]"
-              : "bg-white/10 text-white/90 hover:bg-white/20"
-          }`}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            aria-hidden
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21.7 19.3l-5.6-5.6a5 5 0 0 0-6.4-6.4l3.2 3.2-2.8 2.8-3.2-3.2a5 5 0 0 0 6.4 6.4l5.6 5.6a1 1 0 0 0 1.4-1.4z"
-            />
-          </svg>
-        </button>
-      </div>
+    <CibleProvider active={cibleActive} match={cibleMatch}>
+      <div
+        className={`min-h-screen w-full p-6 text-white relative${
+          cibleActive ? " cible-active" : ""
+        }`}
+      >
+      {sidebarTools}
+      {mobileTools}
       {bannerLabel ? (
         <button
           type="button"
@@ -870,6 +985,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
           overUnderMatchKeys={overUnderMatchKeys}
           overUnderHighlight={overUnderHighlight}
           showOpponentComparison={showOpponentComparison}
+          cibleActive={cibleActive}
           filter={probabilityFilter}
           onFilterChange={setProbabilityFilter}
         />
@@ -911,6 +1027,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
         </p>
       </div>
     </div>
+    </CibleProvider>
   );
 }
 
@@ -1275,48 +1392,18 @@ function DashboardView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      <TeamAiAnalysis
-        team={team}
-        league={league}
-        nextMatch={nextMatch}
-        fixtures={fixtures}
-        opponentFixtures={opponentFixtures}
-        filter={filter}
-        range={range}
-        nextOpponentName={nextOpponentName}
-        nextOpponentId={nextOpponentId}
-      />
-
-      <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
-        <h2 className="font-semibold text-lg mb-3">Resume</h2>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <Stat label="Matchs joues" value={stats.played} />
-          <Stat label="Victoires" value={stats.wins} />
-          <Stat label="Nuls" value={stats.draws} />
-          <Stat label="Defaites" value={stats.losses} />
-          <Stat
-            label="Buts marques"
-            value={
-              <>
-                {goalsFor}{" "}
-                <span className="text-white/25 font-normal">
-                  ({formatRatio(goalsFor, playedMatches)})
-                </span>
-              </>
-            }
-          />
-          <Stat
-            label="Buts encaisses"
-            value={
-              <>
-                {goalsAgainst}{" "}
-                <span className="text-white/25 font-normal">
-                  ({formatRatio(goalsAgainst, playedMatches)})
-                </span>
-              </>
-            }
-          />
-        </div>
+      <div className="md:col-span-2">
+        <TeamAiAnalysis
+          team={team}
+          league={league}
+          nextMatch={nextMatch}
+          fixtures={fixtures}
+          opponentFixtures={opponentFixtures}
+          filter={filter}
+          range={range}
+          nextOpponentName={nextOpponentName}
+          nextOpponentId={nextOpponentId}
+        />
       </div>
 
       <div className="hidden md:grid md:col-span-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
@@ -1619,7 +1706,7 @@ function H2HCard({
       )}
 
       {error ? <p className="text-xs text-red-300 mt-2">{error}</p> : null}
-    </div>
+      </div>
   );
 }
 

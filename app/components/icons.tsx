@@ -32,6 +32,16 @@ export function IconTrophy({ size = 18, ...props }: IconProps) {
   );
 }
 
+export function IconCalendar({ size = 18, ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden {...baseProps} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 9h18" />
+      <path d="M7 13h4M13 13h4M7 17h4" />
+    </svg>
+  );
+}
+
 export function IconSearch({ size = 18, ...props }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden {...baseProps} {...props}>

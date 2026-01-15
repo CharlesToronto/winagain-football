@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Bet, BetResult } from "../utils/bankroll";
+import { Bet, BetResult, BetSelection } from "../utils/bankroll";
 
 type Props = {
   bets: Bet[];
@@ -78,7 +78,7 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
           {groupedBets.map((group) => (
             <div
               key={group.date}
-              className="rounded-xl border border-white/10 bg-white/5 p-4"
+              className="space-y-3"
             >
               <div className="text-sm font-semibold text-white/80">
                 {formatDayLabel(group.date)}
@@ -86,12 +86,18 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
               <div className="mt-3 space-y-2">
                 {group.items.map((bet) => {
                   const isEditing = editingId === bet.id;
-                  const resultLabel = labelResult(bet.result);
-                  const resultClass = resultBadgeClass(bet.result);
+                  const resolvedResult = isEditing
+                    ? ((draft.result as BetResult | undefined) ?? bet.result)
+                    : bet.result;
+                  const resultLabel = labelResult(resolvedResult);
+                  const resultClass = resultBadgeClass(resolvedResult);
+                  const borderClass = resultBorderClass(resolvedResult);
+                  const selectionsText = formatSelections(bet.selections);
+                  const selectionDisplay = selectionsText || bet.bet_type;
                   return (
                     <div
                       key={bet.id}
-                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2"
+                      className={`rounded-lg border ${borderClass} bg-white/5 px-3 py-2`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-4 md:flex-nowrap">
                         <div className="min-w-0 flex-1">
@@ -124,23 +130,46 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                               #{indexMap.get(bet.id) ?? "-"}
                             </span>
                           </div>
-                          <div className="mt-1 text-base font-semibold text-white truncate">
-                            {isEditing ? (
-                              <input
-                                value={draft.description ?? ""}
-                                onChange={(e) =>
-                                  setDraft((d) => ({
-                                    ...d,
-                                    description: e.target.value,
-                                  }))
-                                }
-                                className="w-full bg-white/10 border border-white/20 rounded px-2 py-1"
-                              />
-                            ) : (
-                              bet.description
-                            )}
+                          <div className="mt-1 flex items-center justify-between gap-3">
+                            <div className="min-w-0 flex-1 text-base font-semibold text-white truncate">
+                              {isEditing ? (
+                                <input
+                                  value={draft.description ?? ""}
+                                  onChange={(e) =>
+                                    setDraft((d) => ({
+                                      ...d,
+                                      description: e.target.value,
+                                    }))
+                                  }
+                                  className="w-full bg-white/10 border border-white/20 rounded px-2 py-1"
+                                />
+                              ) : (
+                                bet.description
+                              )}
+                            </div>
+                            <div className="text-sm font-semibold text-white/80 md:hidden">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={draft.odds ?? bet.odds}
+                                  onChange={(e) =>
+                                    setDraft((d) => ({
+                                      ...d,
+                                      odds: parseFloat(e.target.value),
+                                    }))
+                                  }
+                                  className="w-20 bg-white/10 border border-white/20 rounded px-2 py-1 text-sm"
+                                />
+                              ) : (
+                                `Cote ${bet.odds.toFixed(2)}`
+                              )}
+                            </div>
                           </div>
-                          <div className="text-xs text-white/60 truncate">
+                          <div className="text-xs text-white/60 truncate md:hidden">
+                            {`Selection: ${selectionDisplay}`}
+                          </div>
+                          <div className="hidden md:block text-xs text-white/60 truncate">
                             {isEditing ? (
                               <input
                                 value={draft.bet_type ?? ""}
@@ -155,14 +184,12 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                             ) : (
                               <>
                                 {bet.bet_type}
-                                {bet.bet_kind === "combined" && bet.selections?.length
-                                  ? ` • ${bet.selections.length} selections`
-                                  : ""}
+                                {selectionsText ? ` | Selections: ${selectionsText}` : ""}
                               </>
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-4 md:flex-nowrap">
+                        <div className="hidden md:flex flex-wrap items-center gap-4 md:flex-nowrap">
                           <StatInline label="Cote">
                             {isEditing ? (
                               <input
@@ -325,6 +352,33 @@ function resultBadgeClass(result: BetResult) {
     default:
       return "bg-white/10 text-white/70 border border-white/10";
   }
+}
+
+function resultBorderClass(result: BetResult) {
+  switch (result) {
+    case "win":
+      return "border-emerald-400/50";
+    case "loss":
+      return "border-red-400/50";
+    case "void":
+      return "border-sky-400/50";
+    case "pending":
+    default:
+      return "border-white/10";
+  }
+}
+
+function formatSelections(selections?: BetSelection[] | null) {
+  if (!selections?.length) return "";
+  return selections
+    .map((sel) => {
+      const description = sel.description?.trim();
+      const odds = Number.isFinite(sel.odds) ? sel.odds.toFixed(2) : "";
+      if (description && odds) return `${description} (${odds})`;
+      return description || odds;
+    })
+    .filter(Boolean)
+    .join(" | ");
 }
 
 function StatInline({

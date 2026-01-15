@@ -7,6 +7,16 @@ type Payload = {
   nextMatch?: Record<string, any> | null;
   fixturesCount?: number;
   opponentFixturesCount?: number;
+  recentFixtures?: Record<string, any>[] | null;
+  recentStats?: Record<string, any> | null;
+  recentStreaks?: Record<string, any> | null;
+  opponentRecentFixtures?: Record<string, any>[] | null;
+  opponentRecentStats?: Record<string, any> | null;
+  opponentRecentStreaks?: Record<string, any> | null;
+  h2hFixturesCount?: number;
+  h2hFixtures?: Record<string, any>[] | null;
+  h2hStats?: Record<string, any> | null;
+  h2hStreaks?: Record<string, any> | null;
   stats?: Record<string, any> | null;
   streaks?: Record<string, any> | null;
   opponentStats?: Record<string, any> | null;
@@ -86,12 +96,18 @@ export async function POST(req: Request) {
   const systemPrompt =
     "Tu es un analyste football. Tu dois resumer la situation de l'equipe et du prochain adversaire " +
     "a partir des donnees JSON. Reponds en francais, concis, clair, sans inventer. " +
-    "Format Markdown strict: " +
+    "Format Markdown strict (sans libelle 'Enchainements recents'): " +
     "## Bilan (3-5 phrases) " +
     "## Points cles (3-6 puces avec '-') " +
+    "Priorite: repere les enchainements (2+ matchs consecutifs, 2/3/4/5...) " +
+    "sur les evenements comme over/under 3.5, resultat X/1/2, BTTS, clean sheet, " +
+    "et indique aussi si ces enchainements existent en H2H (si h2hFixtures est fourni). " +
+    "Propose aussi une piste de contre-tendance quand une serie est longue ou que " +
+    "le taux de continuation est faible dans les streaks; sinon dis qu'il n'y a " +
+    "pas de contre-tendance claire. " +
     "Si une liste est demandee, reponds en liste Markdown. " +
     "Si une info manque, dis-le clairement. " +
-    "Mets en avant les stats entre 70-100% ou 0-30% si elles existent. " +
+    "Mets en avant uniquement les stats entre 68% et 100% si elles existent. " +
     "Les listes de matchs sont ordonnees du plus recent au plus ancien. " +
     "Base l'analyse sur stats/streaks (selection) et utilise recentFixtures/recentStats (50 matchs) pour comparer si besoin.";
   const userPrompt = `Donnees JSON:\n${JSON.stringify(payload)}`;

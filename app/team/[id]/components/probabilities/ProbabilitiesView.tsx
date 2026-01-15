@@ -85,6 +85,7 @@ export default function ProbabilitiesView({
   showOpponentComparison,
   filter,
   onFilterChange,
+  cibleActive,
 }: {
   fixtures: Fixture[];
   teamId?: number | null;
@@ -98,6 +99,7 @@ export default function ProbabilitiesView({
   showOpponentComparison?: boolean;
   filter: FilterKey;
   onFilterChange: (value: FilterKey) => void;
+  cibleActive?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -132,7 +134,11 @@ export default function ProbabilitiesView({
   };
   const streaks = streakStats;
   const calendarActive = Boolean(cutoffDate);
-  const cardBorderClass = calendarActive ? "rounded-xl border border-red-500/70" : "";
+  const cardBorderClass = calendarActive
+    ? "rounded-xl border border-red-500/70"
+    : cibleActive
+    ? "rounded-xl border border-blue-500/60"
+    : "";
   const opponentComparisonActive = Boolean(showOpponentComparison);
   const teamGoalsLabel = teamGoalsFocus === "for" ? "Buts marques" : "Buts encaisses";
   const teamName = useMemo(() => {

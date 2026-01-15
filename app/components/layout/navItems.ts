@@ -1,6 +1,7 @@
 import {
   IconHome,
   IconTrophy,
+  IconCalendar,
   IconSearch,
   IconUsers,
   IconSettings,
@@ -11,6 +12,7 @@ import {
 export const navItems = [
   { name: "Home", href: "/home", icon: IconHome },
   { name: "Leagues", href: "/leagues", icon: IconTrophy },
+  { name: "Rencontre", href: "/rencontre", icon: IconCalendar },
   { name: "Bankroll", href: "/bankroll", icon: IconWallet },
   { name: "Search", href: "/search", icon: IconSearch },
   { name: "Users", href: "/users", icon: IconUsers },

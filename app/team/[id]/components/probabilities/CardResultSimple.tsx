@@ -87,6 +87,10 @@ export default function CardResultSimple({
     "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
   const activeButtonClass = "bg-green-500/30 border-green-400 text-white";
   const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
+  const locationLabel =
+    location === "all" ? "General" : location === "home" ? "Home" : "Away";
+  const resultCategory = `Resultats (${locationLabel})`;
+  const scoringCategory = `Buts & scoring (${locationLabel})`;
 
   return (
     <div className="card bg-white/5 rounded-xl p-6 shadow">
@@ -120,6 +124,7 @@ export default function CardResultSimple({
           percentBlue={
             resolvedStreaks?.win?.active ? `${resolvedStreaks.win.percent}%` : percentFallback
           }
+          selectionCategory={resultCategory}
         />
         <StatRow
           label="Nul"
@@ -131,6 +136,7 @@ export default function CardResultSimple({
               ? `${resolvedStreaks.draw.percent}%`
               : percentFallback
           }
+          selectionCategory={resultCategory}
         />
         <StatRow
           label="DAcfaite"
@@ -142,6 +148,7 @@ export default function CardResultSimple({
               ? `${resolvedStreaks.lose.percent}%`
               : percentFallback
           }
+          selectionCategory={resultCategory}
         />
       </div>
       <div className="pt-3 border-t border-white/10 space-y-1">
@@ -158,6 +165,7 @@ export default function CardResultSimple({
               ? `${resolvedStreaks.btts.percent}%`
               : percentFallback
           }
+          selectionCategory={scoringCategory}
         />
         <StatRow
           label="Clean Sheet Home"
@@ -169,6 +177,7 @@ export default function CardResultSimple({
               ? `${resolvedStreaks.clean_home.percent}%`
               : percentFallback
           }
+          selectionCategory={scoringCategory}
         />
         <StatRow
           label="Clean Sheet Away"
@@ -180,6 +189,7 @@ export default function CardResultSimple({
               ? `${resolvedStreaks.clean_away.percent}%`
               : percentFallback
           }
+          selectionCategory={scoringCategory}
         />
       </div>
     </div>

@@ -41,6 +41,7 @@ export default function CardDoubleChance({
           percentOrange={showOpponent ? `${opponentDc1x.percent}%` : undefined}
           highlight={shouldHighlight("1x")}
           percentBlue={resolvedStreaks?.dc_1x?.active ? `${resolvedStreaks.dc_1x.percent}%` : "-"}
+          selectionCategory="Double chance"
         />
         <StatRow
           label="X2"
@@ -49,6 +50,7 @@ export default function CardDoubleChance({
           percentOrange={showOpponent ? `${opponentDcx2.percent}%` : undefined}
           highlight={shouldHighlight("x2")}
           percentBlue={resolvedStreaks?.dc_x2?.active ? `${resolvedStreaks.dc_x2.percent}%` : "-"}
+          selectionCategory="Double chance"
         />
         <StatRow
           label="12"
@@ -57,6 +59,7 @@ export default function CardDoubleChance({
           percentOrange={showOpponent ? `${opponentDc12.percent}%` : undefined}
           highlight={shouldHighlight("12")}
           percentBlue={resolvedStreaks?.dc_12?.active ? `${resolvedStreaks.dc_12.percent}%` : "-"}
+          selectionCategory="Double chance"
         />
       </div>
     </div>
