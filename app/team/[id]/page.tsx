@@ -330,7 +330,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
   const trendSignalDetails = useMemo(() => {
     const teamLast = getLatestPlayedFixture(fixtures);
     const opponentLast = getLatestPlayedFixture(opponentFixtures);
-    const teamLabel = team?.name ?? "Equipe";
+    const teamLabel = team?.name ?? "Équipe";
     const opponentLabel = nextOpponentName ?? "Adversaire";
     const teamDetail = describeTrendSignal(teamLast, teamStats, teamLabel);
     const opponentDetail = describeTrendSignal(opponentLast, opponentStats, opponentLabel);
@@ -753,7 +753,7 @@ export default function TeamPage({ params }: { params: { id: string } }) {
     : null;
 
   if (loading) return <p className="p-6 text-white">Chargement...</p>;
-  if (!team) return <p className="p-6 text-white">Aucune donnAce trouvAce.</p>;
+  if (!team) return <p className="p-6 text-white">Aucune donnée trouvée.</p>;
 
   return (
     <CibleProvider active={cibleActive} match={cibleMatch}>
@@ -1150,7 +1150,7 @@ function describeTrendSignal(
   }
 
   if (reasons.length === 0) return { active: false, reason: null };
-  const safeLabel = label || "Equipe";
+  const safeLabel = label || "Équipe";
   return { active: true, reason: `${safeLabel} ${reasons.join(" et ")}` };
 }
 

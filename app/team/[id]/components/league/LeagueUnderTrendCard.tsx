@@ -233,7 +233,7 @@ export default function LeagueUnderTrendCard({
       </div>
 
       {totalSlots === 0 ? (
-        <p className="text-sm text-white/70">Aucune donnee disponible.</p>
+        <p className="text-sm text-white/70">Aucune donnée disponible.</p>
       ) : (
         <div className="w-full flex-1 min-h-0 select-none flex flex-col">
           <div

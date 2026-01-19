@@ -205,7 +205,7 @@ export default function LeagueRoundFixturesCard({
       </div>
 
       {rounds.length === 0 ? (
-        <p className="text-sm text-white/70">Aucune donnee disponible.</p>
+        <p className="text-sm text-white/70">Aucune donnée disponible.</p>
       ) : (
         <>
           <div className="hidden sm:block">

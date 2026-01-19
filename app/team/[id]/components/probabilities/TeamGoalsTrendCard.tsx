@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   getGoalsForMode,
   resolveIsHome,
@@ -34,6 +35,7 @@ type Point = {
   label: string;
   value: number;
   tooltip: {
+    asOf?: string;
     date?: string;
     opponent?: string;
     score?: string;
@@ -65,6 +67,14 @@ function toPath(points: Point[]) {
 function buildSeries(fixtures: Fixture[], mode: Mode, focus: GoalFocus) {
   const usable = (fixtures ?? [])
     .map((f, idx) => {
+      const asOf =
+        typeof f?.date_utc === "string"
+          ? f.date_utc
+          : typeof f?.fixture?.date === "string"
+            ? f.fixture.date
+            : typeof f?.date === "string"
+              ? f.date
+              : undefined;
       const dateRaw =
         (f.fixture && f.fixture.date) ||
         f.date_utc ||
@@ -88,6 +98,7 @@ function buildSeries(fixtures: Fixture[], mode: Mode, focus: GoalFocus) {
         date,
         value,
         tooltip: {
+          asOf,
           date: dateObj ? dateObj.toLocaleDateString("fr-FR") : undefined,
           opponent: opponent ?? undefined,
           score: `${goals.home}-${goals.away}`,
@@ -140,6 +151,9 @@ export default function TeamGoalsTrendCard({
   onGoalFocusChange?: (value: GoalFocus) => void;
   showOpponentComparison?: boolean;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
   const [localThreshold, setLocalThreshold] = useState(3.5);
@@ -190,6 +204,14 @@ export default function TeamGoalsTrendCard({
     }
   }, [showOpponentComparison]);
 
+  const pushAsOf = (asOf?: string) => {
+    if (!asOf) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("asOf", asOf);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
   const { points, avg, total } = useMemo(
     () => buildSeries(fixtures ?? [], mode, goalFocus),
     [fixtures, mode, goalFocus]
@@ -225,7 +247,7 @@ export default function TeamGoalsTrendCard({
     hoverIdx !== null && opponentSeries.points[hoverIdx]
       ? opponentSeries.points[hoverIdx]
       : null;
-  const resolvedTeamName = teamName && teamName.trim() ? teamName : "Equipe";
+  const resolvedTeamName = teamName && teamName.trim() ? teamName : "Équipe";
   const showOpponentAllowed =
     Boolean(showOpponentComparison && opponentFixtures?.length);
   const buttonBaseClass =
@@ -235,20 +257,20 @@ export default function TeamGoalsTrendCard({
   const filterRowClass = `flex items-center gap-2 flex-nowrap pb-1 ${
     isThresholdOpen ? "overflow-visible" : "overflow-x-auto no-scrollbar"
   }`;
-  const focusLabel = goalFocus === "for" ? "Buts marques" : "Buts encaisses";
+  const focusLabel = goalFocus === "for" ? "Buts marqués" : "Buts encaissés";
 
   return (
     <div className="bg-sky-400/10 backdrop-blur-sm rounded-xl p-6 shadow md:col-span-2 flex flex-col md:h-[20rem]">
       <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts {resolvedTeamName}</h3>
-          <p className="text-xs text-white/70">Serie de {total} match(s)</p>
+          <p className="text-xs text-white/70">Série de {total} match(s)</p>
         </div>
         <div className={filterRowClass}>
           <div className="flex items-center gap-2 shrink-0">
             {([
-              { key: "for", label: "Marques" },
-              { key: "against", label: "Encaisses" },
+              { key: "for", label: "Marqués" },
+              { key: "against", label: "Encaissés" },
             ] as { key: GoalFocus; label: string }[]).map((item) => (
               <button
                 key={item.key}
@@ -314,7 +336,7 @@ export default function TeamGoalsTrendCard({
       </div>
 
       {points.length === 0 ? (
-        <p className="text-sm text-white/70">Aucune donnee disponible.</p>
+        <p className="text-sm text-white/70">Aucune donnée disponible.</p>
       ) : (
         <div className="relative w-full h-56 md:h-full flex-1 min-h-0 select-none">
           <svg
@@ -429,7 +451,7 @@ export default function TeamGoalsTrendCard({
           </svg>
 
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 cursor-pointer"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = ((e.clientX - rect.left) / rect.width) * viewWidth;
@@ -445,6 +467,24 @@ export default function TeamGoalsTrendCard({
               setHoverIdx(nearest);
             }}
             onMouseLeave={() => setHoverIdx(null)}
+            onClick={(e) => {
+              if (!points.length) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = ((e.clientX - rect.left) / rect.width) * viewWidth;
+              let nearest = 0;
+              let best = Infinity;
+              points.forEach((p, idx) => {
+                const dist = Math.abs(p.x - x);
+                if (dist < best) {
+                  best = dist;
+                  nearest = idx;
+                }
+              });
+              const target = points[nearest];
+              if (target?.tooltip?.asOf) {
+                pushAsOf(target.tooltip.asOf);
+              }
+            }}
           />
 
           {hoveredPoint && (

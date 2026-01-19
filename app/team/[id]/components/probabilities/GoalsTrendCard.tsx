@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Fixture = any;
 export type Mode = "FT" | "HT" | "2H";
@@ -30,6 +31,7 @@ type Point = {
   label: string;
   value: number;
   tooltip: {
+    asOf?: string;
     date?: string;
     opponent?: string;
     score?: string;
@@ -157,6 +159,9 @@ export default function GoalsTrendCard({
   threshold?: number;
   onThresholdChange?: (value: number) => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [chartStyle, setChartStyle] = useState<ChartStyle>("line");
   const [showOpponent, setShowOpponent] = useState(false);
@@ -188,9 +193,25 @@ export default function GoalsTrendCard({
     };
   }, []);
 
+  const pushAsOf = (asOf?: string) => {
+    if (!asOf) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("asOf", asOf);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
   const { points, avg, total } = useMemo(() => {
     const usable = (fixtures ?? [])
       .map((f, idx) => {
+        const asOf =
+          typeof f?.date_utc === "string"
+            ? f.date_utc
+            : typeof f?.fixture?.date === "string"
+              ? f.fixture.date
+              : typeof f?.date === "string"
+                ? f.date
+                : undefined;
         const dateRaw =
           (f.fixture && f.fixture.date) ||
           f.date_utc ||
@@ -218,6 +239,7 @@ export default function GoalsTrendCard({
           date,
           totalGoals: home + away,
           tooltip: {
+            asOf,
             date: dateObj ? dateObj.toLocaleDateString("fr-FR") : undefined,
             opponent: opponent ?? undefined,
             score,
@@ -333,7 +355,7 @@ export default function GoalsTrendCard({
       <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts (total par match)</h3>
-          <p className="text-xs text-white/70">SAcrie de {total} match(s)</p>
+          <p className="text-xs text-white/70">Série de {total} match(s)</p>
         </div>
         <div className={filterRowClass}>
           <div className="flex items-center gap-2 shrink-0">
@@ -496,7 +518,7 @@ export default function GoalsTrendCard({
 
             {chartStyle === "line" ? (
               <>
-                {/* Zone + courbe lissAce */}
+                {/* Zone + courbe lissée */}
                 <defs>
                   <linearGradient id="goalsLineSmooth" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stopColor={THEME_GREEN} stopOpacity="0.6" />
@@ -623,7 +645,7 @@ export default function GoalsTrendCard({
 
           {/* Overlay hover */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 cursor-pointer"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = ((e.clientX - rect.left) / rect.width) * viewWidth;
@@ -639,6 +661,24 @@ export default function GoalsTrendCard({
               setHoverIdx(nearest);
             }}
             onMouseLeave={() => setHoverIdx(null)}
+            onClick={(e) => {
+              if (!points.length) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = ((e.clientX - rect.left) / rect.width) * viewWidth;
+              let nearest = 0;
+              let best = Infinity;
+              points.forEach((p, idx) => {
+                const dist = Math.abs(p.x - x);
+                if (dist < best) {
+                  best = dist;
+                  nearest = idx;
+                }
+              });
+              const target = points[nearest];
+              if (target?.tooltip?.asOf) {
+                pushAsOf(target.tooltip.asOf);
+              }
+            }}
           />
 
           {hoveredPoint && (

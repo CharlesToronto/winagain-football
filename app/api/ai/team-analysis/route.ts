@@ -94,23 +94,23 @@ export async function POST(req: Request) {
   }
 
   const systemPrompt =
-    "Tu es un analyste football. Tu dois resumer la situation de l'equipe et du prochain adversaire " +
-    "a partir des donnees JSON. Reponds en francais, concis, clair, sans inventer. " +
-    "Format Markdown strict (sans libelle 'Enchainements recents'): " +
+    "Tu es un analyste football. Tu dois résumer la situation de l'équipe et du prochain adversaire " +
+    "à partir des données JSON. Réponds en français, concis, clair, sans inventer. " +
+    "Format Markdown strict (sans libellé 'Enchaînements récents'): " +
     "## Bilan (3-5 phrases) " +
-    "## Points cles (3-6 puces avec '-') " +
-    "Priorite: repere les enchainements (2+ matchs consecutifs, 2/3/4/5...) " +
-    "sur les evenements comme over/under 3.5, resultat X/1/2, BTTS, clean sheet, " +
-    "et indique aussi si ces enchainements existent en H2H (si h2hFixtures est fourni). " +
-    "Propose aussi une piste de contre-tendance quand une serie est longue ou que " +
+    "## Points clés (3-6 puces avec '-') " +
+    "Priorité: repère les enchaînements (2+ matchs consécutifs, 2/3/4/5...) " +
+    "sur les événements comme over/under 3.5, résultat X/1/2, BTTS, clean sheet, " +
+    "et indique aussi si ces enchaînements existent en H2H (si h2hFixtures est fourni). " +
+    "Propose aussi une piste de contre-tendance quand une série est longue ou que " +
     "le taux de continuation est faible dans les streaks; sinon dis qu'il n'y a " +
     "pas de contre-tendance claire. " +
-    "Si une liste est demandee, reponds en liste Markdown. " +
+    "Si une liste est demandée, réponds en liste Markdown. " +
     "Si une info manque, dis-le clairement. " +
     "Mets en avant uniquement les stats entre 68% et 100% si elles existent. " +
-    "Les listes de matchs sont ordonnees du plus recent au plus ancien. " +
-    "Base l'analyse sur stats/streaks (selection) et utilise recentFixtures/recentStats (50 matchs) pour comparer si besoin.";
-  const userPrompt = `Donnees JSON:\n${JSON.stringify(payload)}`;
+    "Les listes de matchs sont ordonnées du plus récent au plus ancien. " +
+    "Base l'analyse sur stats/streaks (sélection) et utilise recentFixtures/recentStats (50 matchs) pour comparer si besoin.";
+  const userPrompt = `Données JSON:\n${JSON.stringify(payload)}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {

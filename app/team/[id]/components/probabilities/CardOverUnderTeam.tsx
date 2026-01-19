@@ -105,9 +105,9 @@ export default function CardOverUnderTeam({
     return teamBand != null && teamBand === opponentBand;
   };
 
-  const resolvedTeamName = teamName && teamName.trim() ? teamName : "Equipe";
+  const resolvedTeamName = teamName && teamName.trim() ? teamName : "Équipe";
   const selectionCategory = `Over / Under ${resolvedTeamName} (${
-    goalFocus === "for" ? "Marques" : "Encaisses"
+    goalFocus === "for" ? "Marqués" : "Encaissés"
   })`;
 
   return (
@@ -116,8 +116,8 @@ export default function CardOverUnderTeam({
         <h3 className="font-semibold">Over / Under {resolvedTeamName}</h3>
         <div className="flex items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
           {([
-            { key: "for", label: "Marques" },
-            { key: "against", label: "Encaisses" },
+            { key: "for", label: "Marqués" },
+            { key: "against", label: "Encaissés" },
           ] as { key: GoalFocus; label: string }[]).map((item) => (
             <button
               key={item.key}

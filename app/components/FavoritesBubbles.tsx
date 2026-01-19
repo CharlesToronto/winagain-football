@@ -99,13 +99,13 @@ export default function FavoritesBubbles() {
               key={fav.id}
               href={`/team/${fav.id}?tab=stats`}
               className="w-10 h-10 rounded-full bg-white/10 border border-white/10 backdrop-blur-md shadow flex items-center justify-center overflow-hidden"
-              title={fav.name || "Equipe"}
-              aria-label={fav.name || "Equipe"}
+              title={fav.name || "Équipe"}
+              aria-label={fav.name || "Équipe"}
             >
               {fav.logo ? (
                 <img
                   src={fav.logo}
-                  alt={fav.name || "Equipe"}
+                  alt={fav.name || "Équipe"}
                   className="w-6 h-6 object-contain"
                 />
               ) : (

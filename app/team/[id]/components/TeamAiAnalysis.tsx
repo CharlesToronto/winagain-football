@@ -35,6 +35,10 @@ type Props = {
   range?: number | "season";
   nextOpponentName?: string | null;
   nextOpponentId?: number | null;
+  analysisEndpoint?: string;
+  chatEndpoint?: string;
+  payloadExtra?: Record<string, any> | null;
+  autoPrompt?: string;
 };
 
 const CHAT_CACHE_TTL_MS = 60 * 60 * 1000;
@@ -381,6 +385,10 @@ export default function TeamAiAnalysis({
   range,
   nextOpponentName,
   nextOpponentId,
+  analysisEndpoint,
+  chatEndpoint,
+  payloadExtra,
+  autoPrompt,
 }: Props) {
   const [analysis, setAnalysis] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -401,12 +409,15 @@ export default function TeamAiAnalysis({
   const messagesRef = useRef<ChatMessage[]>([]);
   const pendingPromptRef = useRef<string | null>(null);
   const hasSentPendingRef = useRef(false);
+  const hasSentAutoPromptRef = useRef(false);
   const placeholderStateRef = useRef({
     index: 0,
     char: 0,
     direction: 1,
     pause: 6,
   });
+  const analysisUrl = analysisEndpoint ?? "/api/ai/team-analysis";
+  const chatUrl = chatEndpoint ?? "/api/ai/team-chat";
 
   const { engines, computeStreaks } = getProbabilityEngines();
   const computeEngine = engines[filter];
@@ -560,6 +571,7 @@ export default function TeamAiAnalysis({
       h2hFixtures,
       h2hStats,
       h2hStreaks,
+      extra: payloadExtra ?? null,
     }),
     [
       filter,
@@ -584,6 +596,7 @@ export default function TeamAiAnalysis({
       h2hFixtures,
       h2hStats,
       h2hStreaks,
+      payloadExtra,
     ]
   );
 
@@ -703,7 +716,7 @@ export default function TeamAiAnalysis({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/ai/team-analysis", {
+      const res = await fetch(analysisUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payload }),
@@ -759,7 +772,7 @@ export default function TeamAiAnalysis({
       .map((msg) => ({ role: msg.role, content: msg.content }));
 
     try {
-      const res = await fetch("/api/ai/team-chat", {
+      const res = await fetch(chatUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -855,6 +868,27 @@ export default function TeamAiAnalysis({
     };
     run();
   }, [analysis, streaming]);
+
+  useEffect(() => {
+    if (!autoPrompt || hasSentAutoPromptRef.current) return;
+    if (!team?.id) return;
+    if (streaming) return;
+    if (messagesRef.current.some((msg) => msg.role === "user")) return;
+    const run = async () => {
+      hasSentAutoPromptRef.current = true;
+      let analysisText = analysis;
+      if (!analysisText) {
+        try {
+          analysisText = await requestAnalysis();
+        } catch (err: any) {
+          setChatError(err?.message ?? "Erreur inconnue.");
+          return;
+        }
+      }
+      await sendChatMessage(autoPrompt, analysisText);
+    };
+    run();
+  }, [autoPrompt, analysis, streaming, team?.id]);
 
   return (
     <div className="w-full">

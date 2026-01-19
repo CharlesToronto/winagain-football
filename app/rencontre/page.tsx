@@ -73,7 +73,7 @@ function safeTime(value?: string | null) {
 
 function formatCompetitionLabel(competition: CompetitionInfo) {
   const parts = [competition.name, competition.country].filter(Boolean);
-  return parts.length ? parts.join(" - ") : "Competition";
+  return parts.length ? parts.join(" - ") : "Compétition";
 }
 
 function resolveUnderPercent(stats?: TeamMarketStats | null) {
@@ -222,7 +222,7 @@ export default async function RencontrePage({
       competitionMap.get(compId) ??
       ({
         id: compId,
-        name: compId ? `Competition ${compId}` : "Competition",
+        name: compId ? `Compétition ${compId}` : "Compétition",
         country: null,
         logo: null,
       } as CompetitionInfo);
@@ -308,11 +308,17 @@ export default async function RencontrePage({
             <div key={section.key} className="space-y-4">
               <div className="text-lg font-semibold">{section.title}</div>
               {groups.length === 0 ? (
-                <div className="text-sm text-white/60">Aucun match prevu.</div>
+                <div className="text-sm text-white/60">Aucun match prévu.</div>
               ) : (
                 <div className="space-y-4">
                   {groups.map((group) => {
                     const competitionLabel = formatCompetitionLabel(group.competition);
+                    const roundLabels = group.fixtures
+                      .map((fixture) => fixture.round)
+                      .filter(Boolean) as string[];
+                    const uniqueRounds = Array.from(new Set(roundLabels));
+                    const competitionRound =
+                      uniqueRounds.length === 1 ? uniqueRounds[0] : null;
                     return (
                       <div
                         key={`competition-${section.key}-${group.competition.id}`}
@@ -330,8 +336,14 @@ export default async function RencontrePage({
                           )}
                           <div className="min-w-0">
                             <div className="font-semibold truncate">{competitionLabel}</div>
-                            <div className="text-xs text-white/60">
-                              {group.fixtures.length} matchs
+                            <div className="text-xs text-white/60 flex items-center gap-2">
+                              <span>{group.fixtures.length} matchs</span>
+                              {competitionRound ? (
+                                <>
+                                  <span className="text-white/40">•</span>
+                                  <span className="truncate">{competitionRound}</span>
+                                </>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -343,7 +355,12 @@ export default async function RencontrePage({
                               : null;
                             const homePercent = getTeamUnderPercent(fixture.home?.id);
                             const awayPercent = getTeamUnderPercent(fixture.away?.id);
-                            const roundLabel = fixture.round ?? "Marche -3.5";
+                            const roundLabel =
+                              fixture.round && fixture.round === competitionRound
+                                ? null
+                                : fixture.round ?? "Marché -3.5";
+                            const showMeta =
+                              Boolean(roundLabel) || homePercent != null || awayPercent != null;
                             const row = (
                               <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 transition hover:bg-white/10">
                                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:grid-cols-[48px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-sm">
@@ -378,10 +395,10 @@ export default async function RencontrePage({
                                     ) : null}
                                   </div>
                                 </div>
-                                {(fixture.round || homePercent != null || awayPercent != null) ? (
+                                {showMeta ? (
                                   <div className="mt-1 text-xs text-white/50 flex items-center justify-between gap-3">
                                     <span className="truncate flex items-center gap-2">
-                                      {roundLabel}
+                                      {roundLabel ? <span>{roundLabel}</span> : null}
                                       <span className="md:hidden text-white/60 tabular-nums">
                                         {formatTime(fixture.date_utc)}
                                       </span>

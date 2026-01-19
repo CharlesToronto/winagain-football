@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Fixture = any;
 type Location = "all" | "home" | "away";
@@ -23,6 +24,7 @@ type Point = {
   label: string;
   value: number;
   tooltip: {
+    asOf?: string;
     date?: string;
     opponent?: string;
     halves?: string;
@@ -187,6 +189,14 @@ function buildSeries(
 ) {
   const mapped: MatchEntry[] = fixtures
     .map((f) => {
+      const asOf =
+        typeof f?.date_utc === "string"
+          ? f.date_utc
+          : typeof f?.fixture?.date === "string"
+            ? f.fixture.date
+            : typeof f?.date === "string"
+              ? f.date
+              : undefined;
       const dateRaw =
         (f.fixture && f.fixture.date) ||
         f.date_utc ||
@@ -248,6 +258,7 @@ function buildSeries(
         neutral,
         winAny,
         tooltip: {
+          asOf,
           date: dateObj ? dateObj.toLocaleDateString("fr-FR") : undefined,
           opponent: opponent ?? undefined,
           halves: halvesLabel,
@@ -287,21 +298,45 @@ export default function HalfWinTrendCard({
   opponentName = "Adversaire",
   referenceCount = 0,
   teamId,
+  location: controlledLocation,
+  onLocationChange,
 }: {
   fixtures: Fixture[];
   opponentFixtures?: Fixture[];
   opponentName?: string;
   referenceCount?: number;
   teamId?: number | null;
+  location?: Location;
+  onLocationChange?: (value: Location) => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
-  const [location, setLocation] = useState<Location>("all");
+  const [localLocation, setLocalLocation] = useState<Location>("all");
+  const isLocationControlled = controlledLocation != null;
+  const location = controlledLocation ?? localLocation;
+  const handleLocationChange = (value: Location) => {
+    if (onLocationChange) onLocationChange(value);
+    if (!isLocationControlled) {
+      setLocalLocation(value);
+    }
+  };
+  const pushAsOf = (asOf?: string) => {
+    if (!asOf) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("asOf", asOf);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
 
   const series = useMemo(
     () => buildSeries(fixtures ?? [], location, teamId),
     [fixtures, location, teamId]
   );
+  const displayTotal =
+    referenceCount && referenceCount > 0 ? referenceCount : series.total;
   const referenceLimit = series.matches.length || referenceCount;
   const opponentSeries = useMemo(
     () => buildSeries(opponentFixtures ?? [], location, undefined, referenceLimit),
@@ -347,7 +382,7 @@ export default function HalfWinTrendCard({
         <div>
           <h3 className="font-semibold">Tendance mi-temps gagnée</h3>
           <p className="text-xs text-white/70">
-            Série de {series.total} match(s)
+            Série de {displayTotal} match(s)
           </p>
         </div>
         <div className={filterRowClass}>
@@ -360,7 +395,7 @@ export default function HalfWinTrendCard({
               <button
                 key={item.key}
                 type="button"
-                onClick={() => setLocation(item.key)}
+                onClick={() => handleLocationChange(item.key)}
                 className={`${buttonBaseClass} ${
                   location === item.key ? activeButtonClass : inactiveButtonClass
                 }`}
@@ -499,7 +534,7 @@ export default function HalfWinTrendCard({
           </svg>
 
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 cursor-pointer"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = ((e.clientX - rect.left) / rect.width) * VIEW_WIDTH;
@@ -512,6 +547,20 @@ export default function HalfWinTrendCard({
               setHoverIdx(bounded);
             }}
             onMouseLeave={() => setHoverIdx(null)}
+            onClick={(e) => {
+              if (!matchCount) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = ((e.clientX - rect.left) / rect.width) * VIEW_WIDTH;
+              const idx =
+                matchCount <= 1
+                  ? 0
+                  : Math.round((x / VIEW_WIDTH) * (matchCount - 1));
+              const bounded = Math.max(0, Math.min(matchCount - 1, idx));
+              const target = series.matches[bounded];
+              if (target?.tooltip?.asOf) {
+                pushAsOf(target.tooltip.asOf);
+              }
+            }}
           />
 
           {hoveredMatch && (
@@ -559,26 +608,12 @@ export default function HalfWinTrendCard({
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-4 text-xs text-white/70">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-0.5 bg-green-400 inline-block" />
-          <span>Mi-temps gagnées (1 ou 2)</span>
+      {showOpponent && opponentSeries.matches.length > 0 && (
+        <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
+          <span className="w-3 h-0.5 bg-orange-400 inline-block" />
+          <span>{opponentName}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-0.5 bg-slate-300 inline-block" />
-          <span>Mi-temps perdues (1 ou 2)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-300/60 inline-block" />
-          <span>Mi-temps nulles</span>
-        </div>
-        {showOpponent && opponentSeries.matches.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-0.5 bg-orange-400 inline-block" />
-            <span>{opponentName}</span>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

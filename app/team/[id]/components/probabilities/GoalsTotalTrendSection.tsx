@@ -113,7 +113,7 @@ function NextMatchBelowTotalCard({
         <h3 className="font-semibold">Match suivant sous {thresholdLabel}</h3>
         <p className="text-xs text-white/70">
           {summary.lastValue === null ? (
-            "Aucune donnee recente"
+            "Aucune donnée récente"
           ) : (
             <span className="inline-flex items-center gap-2">
               <span

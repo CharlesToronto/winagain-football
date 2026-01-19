@@ -110,9 +110,9 @@ export default function CardOverUnderTeamHomeAway({
     return teamBand != null && teamBand === opponentBand;
   };
 
-  const resolvedTeamName = teamName && teamName.trim() ? teamName : "Equipe";
+  const resolvedTeamName = teamName && teamName.trim() ? teamName : "Équipe";
   const title = `Over / Under ${resolvedTeamName} (${side === "home" ? "Home" : "Away"})`;
-  const focusLabel = goalFocus === "for" ? "Marques" : "Encaisses";
+  const focusLabel = goalFocus === "for" ? "Marqués" : "Encaissés";
   const selectionCategory = `${title} - ${focusLabel}`;
   const buttonBaseClass =
     "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
@@ -132,8 +132,8 @@ export default function CardOverUnderTeamHomeAway({
   ));
 
   const focusButtons = ([
-    { key: "for", label: "Marques" },
-    { key: "against", label: "Encaisses" },
+    { key: "for", label: "Marqués" },
+    { key: "against", label: "Encaissés" },
   ] as { key: GoalFocus; label: string }[]).map((item) => (
     <button
       key={item.key}

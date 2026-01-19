@@ -72,7 +72,7 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-white">
       <h3 className="font-semibold text-lg mb-3">Historique des paris</h3>
       {!bets.length ? (
-        <div className="text-sm text-white/70">Aucun pari enregistre.</div>
+        <div className="text-sm text-white/70">Aucun pari enregistré.</div>
       ) : (
         <div className="space-y-4">
           {groupedBets.map((group) => (
@@ -94,6 +94,10 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                   const borderClass = resultBorderClass(resolvedResult);
                   const selectionsText = formatSelections(bet.selections);
                   const selectionDisplay = selectionsText || bet.bet_type;
+                  const notesText =
+                    bet.bet_kind === "combined"
+                      ? selectionsText
+                      : `${bet.bet_type}${selectionsText ? ` | Selections: ${selectionsText}` : ""}`;
                   return (
                     <div
                       key={bet.id}
@@ -103,7 +107,7 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 text-xs text-white/70">
                             <span className="rounded-md border border-white/10 bg-white/10 px-2 py-0.5">
-                              {bet.bet_kind === "combined" ? "Combine" : "Simple"}
+                              {bet.bet_kind === "combined" ? "Combiné" : "Simple"}
                             </span>
                             {isEditing ? (
                               <select
@@ -117,7 +121,7 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                                 className="bg-[#1f0f3a] border border-white/20 rounded px-2 py-1 text-xs"
                               >
                                 <option value="pending">En attente</option>
-                                <option value="win">Gagne</option>
+                                <option value="win">Gagné</option>
                                 <option value="loss">Perdu</option>
                                 <option value="void">Void</option>
                               </select>
@@ -167,7 +171,9 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                             </div>
                           </div>
                           <div className="text-xs text-white/60 truncate md:hidden">
-                            {`Selection: ${selectionDisplay}`}
+                            {bet.bet_kind === "combined" && selectionsText
+                              ? selectionsText
+                              : selectionDisplay}
                           </div>
                           <div className="hidden md:block text-xs text-white/60 truncate">
                             {isEditing ? (
@@ -182,10 +188,7 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
                                 className="w-full bg-white/10 border border-white/20 rounded px-2 py-1"
                               />
                             ) : (
-                              <>
-                                {bet.bet_type}
-                                {selectionsText ? ` | Selections: ${selectionsText}` : ""}
-                              </>
+                              notesText
                             )}
                           </div>
                         </div>
@@ -319,7 +322,7 @@ export default function BetsTable({ bets, onUpdate, onDelete }: Props) {
 function labelResult(result: BetResult) {
   switch (result) {
     case "win":
-      return "Gagne";
+      return "Gagné";
     case "loss":
       return "Perdu";
     case "pending":

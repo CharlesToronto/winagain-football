@@ -526,7 +526,7 @@ export default function ConfidenceView({
               : "bg-white/10 text-white/60 hover:bg-white/15"
           }`}
         >
-          Equipe
+          Équipe
         </button>
         <button
           type="button"
@@ -578,7 +578,7 @@ export default function ConfidenceView({
       <div className="p-4 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
         <div className="font-semibold">Calibration badges (under 3.5)</div>
         <div className="text-xs text-white/70 mt-1">
-          {scopeFilter === "league" ? "Scope ligue" : "Scope equipe"} | Mode FT | Filtre
+          {scopeFilter === "league" ? "Scope ligue" : "Scope équipe"} | Mode FT | Filtre
           historique: {rangeLabel(range)} | Badges actifs sur {TOTAL_BADGES}
         </div>
         <div className="text-xs text-white/70 mt-1">
@@ -592,7 +592,7 @@ export default function ConfidenceView({
         </div>
       ) : !hasData ? (
         <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-white/80">
-          Aucune donnee disponible pour ce filtre.
+          Aucune donnée disponible pour ce filtre.
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

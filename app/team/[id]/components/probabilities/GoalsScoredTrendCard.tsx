@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Fixture = any;
 export type Mode = "FT" | "HT" | "2H";
@@ -66,6 +67,7 @@ export type SeriesEntry = {
   date: number;
   value: number;
   tooltip: {
+    asOf?: string;
     date?: string;
     opponent?: string;
     score?: string;
@@ -113,6 +115,14 @@ function toPath(points: LinePoint[]) {
 export function buildEntries(fixtures: Fixture[], mode: Mode, location: Location) {
   const mapped = (fixtures ?? [])
     .map((f) => {
+      const asOf =
+        typeof f?.date_utc === "string"
+          ? f.date_utc
+          : typeof f?.fixture?.date === "string"
+            ? f.fixture.date
+            : typeof f?.date === "string"
+              ? f.date
+              : undefined;
       const dateRaw =
         (f.fixture && f.fixture.date) ||
         f.date_utc ||
@@ -133,6 +143,7 @@ export function buildEntries(fixtures: Fixture[], mode: Mode, location: Location
         date,
         value: isHome ? goals.home : goals.away,
         tooltip: {
+          asOf,
           date: dateObj ? dateObj.toLocaleDateString("fr-FR") : undefined,
           opponent: opponent ?? undefined,
           score: `${goals.home}-${goals.away}`,
@@ -202,6 +213,9 @@ export default function GoalsScoredTrendCard({
   location?: Location;
   onLocationChange?: (value: Location) => void;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [chartStyle, setChartStyle] = useState<ChartStyle>("bar");
   const [showOpponent, setShowOpponent] = useState(false);
@@ -245,6 +259,14 @@ export default function GoalsScoredTrendCard({
   useEffect(() => {
     setHoverIdx(null);
   }, [fixtures, mode, location]);
+
+  const pushAsOf = (asOf?: string) => {
+    if (!asOf) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("asOf", asOf);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
 
   const { points, avg, total } = useMemo(() => {
     const entries = buildEntries(fixtures ?? [], mode, location);
@@ -294,7 +316,7 @@ export default function GoalsScoredTrendCard({
     hoverIdx !== null && opponentSeries.bars[hoverIdx]
       ? opponentSeries.bars[hoverIdx]
       : null;
-  const resolvedTeamName = teamName || "Equipe";
+  const resolvedTeamName = teamName || "Équipe";
   const buttonBaseClass =
     "px-2 py-0.5 text-[11px] rounded-md border border-white/60 whitespace-nowrap shrink-0 transition";
   const activeButtonClass = "bg-green-500/30 border-green-400 text-white";
@@ -309,7 +331,7 @@ export default function GoalsScoredTrendCard({
       <div className="flex flex-col gap-2 mb-4">
         <div>
           <h3 className="font-semibold">Tendance buts {resolvedTeamName}</h3>
-          <p className="text-xs text-white/70">Serie de {total} match(s)</p>
+          <p className="text-xs text-white/70">Série de {total} match(s)</p>
         </div>
         <div className={filterRowClass}>
           <div className="flex items-center gap-2 shrink-0">
@@ -405,7 +427,7 @@ export default function GoalsScoredTrendCard({
       </div>
 
       {points.length === 0 ? (
-        <p className="text-sm text-white/70">Aucune donnee disponible.</p>
+        <p className="text-sm text-white/70">Aucune donnée disponible.</p>
       ) : (
         <div className="relative w-full flex-1 min-h-0 select-none">
           <svg
@@ -579,7 +601,7 @@ export default function GoalsScoredTrendCard({
           </svg>
 
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 cursor-pointer"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = ((e.clientX - rect.left) / rect.width) * viewWidth;
@@ -595,6 +617,24 @@ export default function GoalsScoredTrendCard({
               setHoverIdx(nearest);
             }}
             onMouseLeave={() => setHoverIdx(null)}
+            onClick={(e) => {
+              if (!points.length) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = ((e.clientX - rect.left) / rect.width) * viewWidth;
+              let nearest = 0;
+              let best = Infinity;
+              points.forEach((p, idx) => {
+                const dist = Math.abs(p.x - x);
+                if (dist < best) {
+                  best = dist;
+                  nearest = idx;
+                }
+              });
+              const target = points[nearest];
+              if (target?.tooltip?.asOf) {
+                pushAsOf(target.tooltip.asOf);
+              }
+            }}
           />
 
           {hoveredPoint && (

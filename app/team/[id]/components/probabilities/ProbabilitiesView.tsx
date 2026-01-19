@@ -1,4 +1,4 @@
-"use client";
+﻿﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CardResultSimple from "./CardResultSimple";
@@ -110,6 +110,9 @@ export default function ProbabilitiesView({
   const mobileSummaryRef = useRef<HTMLDivElement | null>(null);
   const mobileSummarySlides = 2;
   const [teamGoalsFocus, setTeamGoalsFocus] = useState<"for" | "against">("for");
+  const [halfWinLocation, setHalfWinLocation] = useState<"all" | "home" | "away">(
+    "all"
+  );
   const [badgeStates, setBadgeStates] =
     useState<Record<BadgeKey, boolean>>(INITIAL_BADGE_STATE);
   const totalBadgeCount = BADGE_KEYS.length;
@@ -142,7 +145,7 @@ export default function ProbabilitiesView({
     ? "rounded-xl border border-blue-500/60"
     : "";
   const opponentComparisonActive = Boolean(showOpponentComparison);
-  const teamGoalsLabel = teamGoalsFocus === "for" ? "Buts marques" : "Buts encaisses";
+  const teamGoalsLabel = teamGoalsFocus === "for" ? "Buts marqués" : "Buts encaissés";
   const teamName = useMemo(() => {
     const match = (fixtures ?? []).find(
       (fixture) =>
@@ -229,12 +232,12 @@ export default function ProbabilitiesView({
       ? computeEngine(opponentFixtures ?? [])
       : null;
 
-  console.log("➡️ FIXTURES RECEIVED BY ProbabilitiesView:", fixtures?.length);
-  console.log("➡️ CURRENT FILTER:", filter);
-  console.log("➡️ BASE STATS:", baseStats);
-  console.log("➡️ STREAK STATS:", streakStats);
-  console.log("➡️ FINAL MERGED STATS:", stats);
-  console.log("➡️ STATS SENT TO CARDS:", stats);
+  console.log("âž¡ï¸ FIXTURES RECEIVED BY ProbabilitiesView:", fixtures?.length);
+  console.log("âž¡ï¸ CURRENT FILTER:", filter);
+  console.log("âž¡ï¸ BASE STATS:", baseStats);
+  console.log("âž¡ï¸ STREAK STATS:", streakStats);
+  console.log("âž¡ï¸ FINAL MERGED STATS:", stats);
+  console.log("âž¡ï¸ STATS SENT TO CARDS:", stats);
 
   useEffect(() => {
     async function loadOpponent() {
@@ -278,8 +281,8 @@ export default function ProbabilitiesView({
     const opponentLabel = nextOpponentName ?? "le prochain adversaire";
     const detailSuffix = detail ? ` Contexte: ${detail}.` : "";
     const keyPointsSuffix =
-      " Termine par 3 points cles (puces) sur le prochain match de l'equipe et du prochain adversaire, ou sur leurs series en cours si les infos de match manquent.";
-    const prompt = `Charly, que penses-tu des informations de la carte "${cardTitle}" (filtre ${filter}) pour l'equipe, et de la carte equivalente pour ${opponentLabel} ?${detailSuffix}${keyPointsSuffix}`;
+      " Termine par 3 points clés (puces) sur le prochain match de l'équipe et du prochain adversaire, ou sur leurs séries en cours si les infos de match manquent.";
+    const prompt = `Charly, que penses-tu des informations de la carte "${cardTitle}" (filtre ${filter}) pour l'équipe, et de la carte équivalente pour ${opponentLabel} ?${detailSuffix}${keyPointsSuffix}`;
     try {
       localStorage.setItem(
         "team-ai-pending-prompt",
@@ -349,7 +352,7 @@ export default function ProbabilitiesView({
           >
             <div className="snap-start shrink-0 w-full">
               <div className="space-y-2">
-                <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
+            <AiPromptButton onClick={() => handleAiPrompt("Résultats")} />
                 <div className={cardBorderClass}>
                   <CardResultSimple
                     data={stats}
@@ -379,7 +382,7 @@ export default function ProbabilitiesView({
           </div>
         </div>
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Buts Marqués / Encaissés")} />
+          <AiPromptButton onClick={() => handleAiPrompt("Buts marqués / Encaissés")} />
           <div className={cardBorderClass}>
             <CardGoalsSplit fixtures={fixtures ?? []} />
           </div>
@@ -388,7 +391,7 @@ export default function ProbabilitiesView({
 
       <div className="hidden md:grid md:grid-cols-3 gap-6">
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Resultats")} />
+          <AiPromptButton onClick={() => handleAiPrompt("Résultats")} />
           <div className={cardBorderClass}>
             <CardResultSimple
               data={stats}
@@ -401,7 +404,7 @@ export default function ProbabilitiesView({
           </div>
         </div>
         <div className="space-y-2">
-          <AiPromptButton onClick={() => handleAiPrompt("Buts Marqués / Encaissés")} />
+          <AiPromptButton onClick={() => handleAiPrompt("Buts marqués / Encaissés")} />
           <div className={cardBorderClass}>
             <CardGoalsSplit fixtures={fixtures ?? []} />
           </div>
@@ -492,7 +495,7 @@ export default function ProbabilitiesView({
           <AiPromptButton
             onClick={() =>
               handleAiPrompt(
-                "Over / Under equipe",
+                "Over / Under équipe",
                 `${teamGoalsLabel} | Mode ${filter}`
               )
             }
@@ -514,7 +517,7 @@ export default function ProbabilitiesView({
           <AiPromptButton
             onClick={() =>
               handleAiPrompt(
-                "Over / Under equipe (Home/Away)",
+                "Over / Under équipe (Home/Away)",
                 `${teamGoalsLabel} | Home/Away | Mode ${filter}`
               )
             }
@@ -568,6 +571,7 @@ export default function ProbabilitiesView({
               showOpponentComparison={opponentComparisonActive}
               highlightActive={overUnderHighlight}
               teamId={teamId}
+              location={halfWinLocation}
             />
           </div>
         </div>
@@ -582,6 +586,8 @@ export default function ProbabilitiesView({
               opponentName={nextOpponentName ?? "Adversaire"}
               referenceCount={fixtures?.length ?? 0}
               teamId={teamId}
+              location={halfWinLocation}
+              onLocationChange={setHalfWinLocation}
             />
           </div>
         </div>
@@ -594,5 +600,7 @@ export default function ProbabilitiesView({
     </div>
   );
 }
+
+
 
 

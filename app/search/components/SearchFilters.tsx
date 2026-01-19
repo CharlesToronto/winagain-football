@@ -16,9 +16,9 @@ const FACT_OPTIONS: { label: string; value: FactType }[] = [
 ];
 
 const RESULT_OPTIONS: { label: string; value: ResultType }[] = [
-  { label: "1 (Victoire equipe)", value: "1" },
+  { label: "1 (Victoire équipe)", value: "1" },
   { label: "X (Nul)", value: "X" },
-  { label: "2 (Defaite equipe)", value: "2" },
+  { label: "2 (Défaite équipe)", value: "2" },
   { label: "1X (Victoire ou nul)", value: "1X" },
   { label: "X2 (Nul ou defaite)", value: "X2" },
   { label: "12 (Pas de nul)", value: "12" },
@@ -277,12 +277,12 @@ export function SearchFilters({
               {nextMatchBelowEnabled ? "Actif" : "Inactif"}
             </button>
             <span className="text-xs text-white/60">
-              BasAc sur les buts marquAcs par l'Acquipe.
+              Basé sur les buts marqués par l'équipe.
             </span>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm text-white/70">Seuil buts marquAcs</label>
+            <label className="text-sm text-white/70">Seuil buts marqués</label>
             <select
               className={selectClassName}
               value={nextMatchBelowLine}

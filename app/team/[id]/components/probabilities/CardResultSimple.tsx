@@ -89,13 +89,13 @@ export default function CardResultSimple({
   const inactiveButtonClass = "bg-white/10 text-white/70 blur-[0.6px]";
   const locationLabel =
     location === "all" ? "General" : location === "home" ? "Home" : "Away";
-  const resultCategory = `Resultats (${locationLabel})`;
+  const resultCategory = `Résultats (${locationLabel})`;
   const scoringCategory = `Buts & scoring (${locationLabel})`;
 
   return (
     <div className="card bg-white/5 rounded-xl p-6 shadow">
       <div className="flex flex-col gap-2 mb-3">
-        <h3 className="font-semibold">RAcsultats</h3>
+        <h3 className="font-semibold">Résultats</h3>
         <div className="flex items-center gap-2 flex-nowrap overflow-x-auto no-scrollbar pb-1">
           {([
             { key: "all", label: "General" },
@@ -139,7 +139,7 @@ export default function CardResultSimple({
           selectionCategory={resultCategory}
         />
         <StatRow
-          label="DAcfaite"
+          label="Défaite"
           count={`(${lose.raw}/${total})`}
           percentGreen={`${lose.percent}%`}
           percentOrange={showOpponent ? `${opponentLose.percent}%` : undefined}

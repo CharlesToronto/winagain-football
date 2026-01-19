@@ -70,26 +70,62 @@ export default function CiblePanel({ variant = "sidebar", onClose }: Props) {
           : INITIAL_BANKROLL);
       const now = new Date().toISOString();
       const defaultDate = now.slice(0, 10);
-
-      const newBets: Bet[] = selections.map((selection) => ({
-        id: crypto.randomUUID(),
-        user_id: undefined,
-        bet_date: selection.fixtureDate
-          ? selection.fixtureDate.slice(0, 10)
-          : defaultDate,
+      const selectionDetails = selections.map((selection) => ({
         description: `${formatMatchLabel(selection)} - ${selection.marketLabel}`,
-        bet_type: selection.marketLabel,
-        bet_kind: "simple",
-        selections: null,
         odds: formattedOdds,
-        stake: formattedStake,
-        result: "pending",
-        profit: 0,
-        bankroll_after: 0,
-        starting_capital: base,
-        created_at: now,
-        updated_at: now,
       }));
+      const combinedDate = selections.reduce((acc, selection) => {
+        if (!selection.fixtureDate) return acc;
+        const candidate = new Date(selection.fixtureDate);
+        if (!Number.isFinite(candidate.getTime())) return acc;
+        const current = acc ? new Date(acc) : null;
+        if (!current || candidate.getTime() < current.getTime()) {
+          return selection.fixtureDate;
+        }
+        return acc;
+      }, "" as string);
+      const combinedDateLabel = combinedDate ? combinedDate.slice(0, 10) : defaultDate;
+
+      const newBets: Bet[] =
+        selectionCount > 1
+          ? [
+              {
+                id: crypto.randomUUID(),
+                user_id: undefined,
+                bet_date: combinedDateLabel,
+                description: `Combiné (${selectionCount} sélections)`,
+                bet_type: "Combiné",
+                bet_kind: "combined",
+                selections: selectionDetails,
+                odds: formattedOdds,
+                stake: formattedStake,
+                result: "pending",
+                profit: 0,
+                bankroll_after: 0,
+                starting_capital: base,
+                created_at: now,
+                updated_at: now,
+              },
+            ]
+          : selections.map((selection) => ({
+              id: crypto.randomUUID(),
+              user_id: undefined,
+              bet_date: selection.fixtureDate
+                ? selection.fixtureDate.slice(0, 10)
+                : defaultDate,
+              description: `${formatMatchLabel(selection)} - ${selection.marketLabel}`,
+              bet_type: selection.marketLabel,
+              bet_kind: "simple",
+              selections: null,
+              odds: formattedOdds,
+              stake: formattedStake,
+              result: "pending",
+              profit: 0,
+              bankroll_after: 0,
+              starting_capital: base,
+              created_at: now,
+              updated_at: now,
+            }));
 
       const recalculated = recomputeSequence([...existing, ...newBets], base);
       await upsertBankrollBets(recalculated);

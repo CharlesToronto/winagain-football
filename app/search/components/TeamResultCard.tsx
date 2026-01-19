@@ -56,7 +56,7 @@ export function TeamResultCard({ team }: { team: TeamResult }) {
           href={`/team/${team.id}`}
           className="px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 text-sm"
         >
-          Voir l'equipe
+          Voir l'équipe
         </Link>
       </div>
     </div>

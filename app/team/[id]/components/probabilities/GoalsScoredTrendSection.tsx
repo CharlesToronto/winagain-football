@@ -92,7 +92,7 @@ function NextMatchBelowCard({
     [entries, threshold]
   );
   const thresholdLabel = `+${formatNumber(threshold)}`;
-  const resolvedTeam = teamName || "cette equipe";
+  const resolvedTeam = teamName || "cette équipe";
   const showPercent = summary.lastAbove && summary.triggers > 0;
   const percentLabel = showPercent ? `${summary.percent}%` : "--";
   const detailLabel = summary.triggers
@@ -105,7 +105,7 @@ function NextMatchBelowCard({
         <h3 className="font-semibold">Match suivant sous {thresholdLabel}</h3>
         <p className="text-xs text-white/70">
           {summary.lastValue === null ? (
-            "Aucune donnee recente"
+            "Aucune donnée récente"
           ) : (
             <span className="inline-flex items-center gap-2">
               <span
@@ -253,8 +253,8 @@ export default function GoalsScoredTrendSection({
                 <AiPromptButton
                   onClick={() =>
                     onAiPrompt(
-                      "Tendance buts (MarquAcs)",
-                      `Buts MarquAcs | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
+                      "Tendance buts (Marqués)",
+                      `Buts marqués | Seuil ${thresholdLabel} | Lieu ${locationLabel}`
                     )
                   }
                 />
