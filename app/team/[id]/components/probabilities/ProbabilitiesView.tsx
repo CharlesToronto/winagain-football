@@ -14,6 +14,8 @@ import CardOverUnderHomeAway from "./CardOverUnderHomeAway";
 import CardOverUnderTeam from "./CardOverUnderTeam";
 import CardOverUnderTeamHomeAway from "./CardOverUnderTeamHomeAway";
 import CardGoalsSplit from "./CardGoalsSplit";
+import CardHalfWinRate from "./CardHalfWinRate";
+import HalfWinTrendCard from "./HalfWinTrendCard";
 import AiPromptButton from "./AiPromptButton";
 import ConfidenceBadgeTrigger from "./ConfidenceBadgeTrigger";
 
@@ -556,6 +558,34 @@ export default function ProbabilitiesView({
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <div className="space-y-2 md:col-span-2">
+          <AiPromptButton onClick={() => handleAiPrompt("Mi-temps gagnee")} />
+          <div className={cardBorderClass}>
+            <CardHalfWinRate
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              showOpponentComparison={opponentComparisonActive}
+              highlightActive={overUnderHighlight}
+              teamId={teamId}
+            />
+          </div>
+        </div>
+        <div className="space-y-2 md:col-span-3">
+          <AiPromptButton
+            onClick={() => handleAiPrompt("Tendance mi-temps gagnee")}
+          />
+          <div className={cardBorderClass}>
+            <HalfWinTrendCard
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
+              opponentName={nextOpponentName ?? "Adversaire"}
+              referenceCount={fixtures?.length ?? 0}
+              teamId={teamId}
+            />
+          </div>
+        </div>
+      </div>
       <div className="mt-6 p-4 rounded-lg bg-white/10 text-white text-sm">
         Mode sélectionné : {filter}
         <br />
@@ -564,3 +594,5 @@ export default function ProbabilitiesView({
     </div>
   );
 }
+
+

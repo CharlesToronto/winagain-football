@@ -99,7 +99,11 @@ function normalizeTeamInfo(value: TeamInfo | TeamInfo[] | null | undefined) {
   return value;
 }
 
-export default async function RencontrePage() {
+export default async function RencontrePage({
+  searchParams,
+}: {
+  searchParams?: { day?: string };
+}) {
   const now = new Date();
   const today = startOfDay(now);
   const tomorrow = new Date(today);
@@ -109,6 +113,12 @@ export default async function RencontrePage() {
 
   const todayKey = formatDateKey(today);
   const tomorrowKey = formatDateKey(tomorrow);
+  const activeDay =
+    searchParams?.day === "today"
+      ? "today"
+      : searchParams?.day === "tomorrow"
+        ? "tomorrow"
+        : "all";
 
   const supabase = createClient();
   const { data, error } = await supabase
@@ -234,16 +244,55 @@ export default async function RencontrePage() {
     return groups;
   };
 
-  const sections = [
-    { key: todayKey, title: "Aujourd'hui" },
-    { key: tomorrowKey, title: "Demain" },
-  ];
+  const sections =
+    activeDay === "today"
+      ? [{ key: todayKey, title: "Aujourd'hui" }]
+      : activeDay === "tomorrow"
+        ? [{ key: tomorrowKey, title: "Demain" }]
+        : [
+            { key: todayKey, title: "Aujourd'hui" },
+            { key: tomorrowKey, title: "Demain" },
+          ];
+
+  const todayHref = activeDay === "today" ? "/rencontre" : "/rencontre?day=today";
+  const tomorrowHref =
+    activeDay === "tomorrow" ? "/rencontre" : "/rencontre?day=tomorrow";
+  const headerSubtitle =
+    activeDay === "today"
+      ? "Aujourd'hui"
+      : activeDay === "tomorrow"
+        ? "Demain"
+        : "Aujourd'hui & Demain";
 
   return (
     <div className="min-h-screen p-6 text-white">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h1 className="text-3xl font-bold">Rencontre</h1>
-        <div className="text-sm text-white/70">Aujourd'hui & Demain</div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold">Rencontre</h1>
+          <div className="text-sm text-white/70">{headerSubtitle}</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href={todayHref}
+            className={`px-3 py-1 text-xs rounded-md border transition ${
+              activeDay === "today"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white/80"
+            }`}
+          >
+            Aujourd'hui
+          </Link>
+          <Link
+            href={tomorrowHref}
+            className={`px-3 py-1 text-xs rounded-md border transition ${
+              activeDay === "tomorrow"
+                ? "border-white text-white"
+                : "border-transparent text-white/60 hover:text-white/80"
+            }`}
+          >
+            Demain
+          </Link>
+        </div>
       </div>
 
       {error ? (
