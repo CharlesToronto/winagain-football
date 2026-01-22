@@ -372,9 +372,13 @@ export default function ProbabilitiesView({
                   <CardDoubleChance
                     data={stats}
                     streaks={streaks}
+                    fixtures={fixtures ?? []}
+                    opponentFixtures={opponentFixtures}
                     opponentData={opponentStats}
+                    showOpponentComparison={opponentComparisonActive}
                     highlightKeys={overUnderMatchKeys}
                     highlightActive={overUnderHighlight}
+                    mode={filter}
                   />
                 </div>
               </div>
@@ -415,9 +419,13 @@ export default function ProbabilitiesView({
             <CardDoubleChance
               data={stats}
               streaks={streaks}
+              fixtures={fixtures ?? []}
+              opponentFixtures={opponentFixtures}
               opponentData={opponentStats}
+              showOpponentComparison={opponentComparisonActive}
               highlightKeys={overUnderMatchKeys}
               highlightActive={overUnderHighlight}
+              mode={filter}
             />
           </div>
         </div>

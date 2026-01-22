@@ -1372,7 +1372,7 @@ function DashboardView({
   );
 
   const standingsCard = (
-    <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+    <div className="p-5 bg-white/5 rounded-xl shadow text-white">
       <h2 className="font-semibold text-lg mb-3">Classement</h2>
       {standingsTable.length ? (
         <div className="max-h-[420px] overflow-y-auto pr-2">
@@ -1450,7 +1450,7 @@ function DashboardView({
         {standingsCard}
       </div>
 
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/10 p-6 text-white md:col-span-2">
+      <div className="bg-white/5 rounded-xl shadow p-6 text-white md:col-span-2">
         <h2 className="text-xl font-semibold mb-4">Forme</h2>
 
         {/* SERIE */}
@@ -1621,7 +1621,7 @@ function H2HCard({
   }, [homeId, awayId, leagueId]);
 
   return (
-    <div className="p-5 bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl text-white">
+    <div className="p-5 bg-white/5 rounded-xl shadow text-white">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h2 className="font-semibold text-lg">H2H</h2>

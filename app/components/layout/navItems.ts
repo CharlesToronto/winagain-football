@@ -4,9 +4,9 @@ import {
   IconCalendar,
   IconSearch,
   IconUsers,
-  IconSettings,
   IconWallet,
   IconDatabase,
+  IconMessage,
 } from "@/app/components/icons";
 
 export const navItems = [
@@ -16,7 +16,7 @@ export const navItems = [
   { name: "Bankroll", href: "/bankroll", icon: IconWallet },
   { name: "Search", href: "/search", icon: IconSearch },
   { name: "Deep Seek", href: "/deep-seek", icon: IconSearch },
+  { name: "Chat", href: "/chat", icon: IconMessage },
   { name: "Users", href: "/users", icon: IconUsers },
-  { name: "Settings", href: "/settings", icon: IconSettings },
   { name: "Admin Data", href: "/admin-data", icon: IconDatabase },
 ];

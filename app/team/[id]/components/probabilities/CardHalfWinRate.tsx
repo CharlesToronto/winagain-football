@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import { useCible } from "@/app/components/cible/CibleContext";
 
 type Fixture = any;
@@ -7,8 +7,10 @@ type HalfWinStats = {
   total: number;
   won: number;
   lost: number;
+  draw: number;
   percentWon: number;
   percentLost: number;
+  percentDraw: number;
   seriesTotal: number;
 };
 
@@ -71,6 +73,7 @@ function computeHalfWinStats(
   let totalMatches = 0;
   let wonAtLeastOneHalf = 0;
   let lostAtLeastOneHalf = 0;
+  let drawAtLeastOneHalf = 0;
 
   scoped.forEach((fixture) => {
     const isHome = resolveIsHome(fixture, teamId);
@@ -82,11 +85,16 @@ function computeHalfWinStats(
     const wonSecond = halves.second.team > halves.second.opp;
     const lostFirst = halves.first.team < halves.first.opp;
     const lostSecond = halves.second.team < halves.second.opp;
+    const drawFirst = halves.first.team === halves.first.opp;
+    const drawSecond = halves.second.team === halves.second.opp;
     if (wonFirst || wonSecond) {
       wonAtLeastOneHalf += 1;
     }
     if (lostFirst || lostSecond) {
       lostAtLeastOneHalf += 1;
+    }
+    if (drawFirst || drawSecond) {
+      drawAtLeastOneHalf += 1;
     }
   });
 
@@ -94,13 +102,17 @@ function computeHalfWinStats(
     totalMatches > 0 ? Math.round((wonAtLeastOneHalf / totalMatches) * 100) : 0;
   const pctLost =
     totalMatches > 0 ? Math.round((lostAtLeastOneHalf / totalMatches) * 100) : 0;
+  const pctDraw =
+    totalMatches > 0 ? Math.round((drawAtLeastOneHalf / totalMatches) * 100) : 0;
 
   return {
     total: totalMatches,
     won: wonAtLeastOneHalf,
     lost: lostAtLeastOneHalf,
+    draw: drawAtLeastOneHalf,
     percentWon: pctWon,
     percentLost: pctLost,
+    percentDraw: pctDraw,
     seriesTotal,
   };
 }
@@ -139,15 +151,23 @@ export default function CardHalfWinRate({
   );
   const opponentAvailable = Boolean(opponentFixtures?.length);
   const showOpponent = Boolean(showOpponentComparison && opponentAvailable);
-  const { total, won, lost, percentWon, percentLost, seriesTotal } = teamStats;
-  const { total: opponentTotal, won: opponentWon, lost: opponentLost } = opponentStats;
+  const { total, won, lost, draw, percentWon, percentLost, percentDraw } = teamStats;
+  const {
+    total: opponentTotal,
+    won: opponentWon,
+    lost: opponentLost,
+    draw: opponentDraw,
+  } = opponentStats;
 
   const percentWonLabel = total > 0 ? `${percentWon}%` : "--";
   const percentLostLabel = total > 0 ? `${percentLost}%` : "--";
+  const percentDrawLabel = total > 0 ? `${percentDraw}%` : "--";
   const opponentPercentWonLabel =
     showOpponent && opponentTotal > 0 ? `${opponentStats.percentWon}%` : "--";
   const opponentPercentLostLabel =
     showOpponent && opponentTotal > 0 ? `${opponentStats.percentLost}%` : "--";
+  const opponentPercentDrawLabel =
+    showOpponent && opponentTotal > 0 ? `${opponentStats.percentDraw}%` : "--";
 
   const highlightWon =
     Boolean(highlightActive && opponentAvailable) &&
@@ -161,6 +181,12 @@ export default function CardHalfWinRate({
     opponentTotal > 0 &&
     isHighlightBand(percentLost) &&
     isHighlightBand(opponentStats.percentLost);
+  const highlightDraw =
+    Boolean(highlightActive && opponentAvailable) &&
+    total > 0 &&
+    opponentTotal > 0 &&
+    isHighlightBand(percentDraw) &&
+    isHighlightBand(opponentStats.percentDraw);
 
   const handleSelect = (label: string, percent: number, opponentPercent?: number) => {
     if (!selectable) return;
@@ -168,9 +194,8 @@ export default function CardHalfWinRate({
       marketLabel: label,
       marketCategory: selectionCategory,
       percentGreen: Number.isFinite(percent) ? percent : null,
-      percentOrange: showOpponent && Number.isFinite(opponentPercent)
-        ? opponentPercent
-        : null,
+      percentOrange:
+        showOpponent && Number.isFinite(opponentPercent) ? opponentPercent : null,
     });
   };
 
@@ -183,17 +208,17 @@ export default function CardHalfWinRate({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-semibold">Au moins une mi-temps</h3>
-          <p className="text-xs text-white/70">
-            L'équipe gagne ou perd la 1re ou la 2e mi-temps.
-          </p>
-          <p className="text-xs text-white/50">Série de {seriesTotal} match(s)</p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div
           role={selectable ? "button" : undefined}
           tabIndex={selectable ? 0 : undefined}
-          onClick={selectable ? () => handleSelect("Gagnée", percentWon, opponentStats.percentWon) : undefined}
+          onClick={
+            selectable
+              ? () => handleSelect("Gagnée", percentWon, opponentStats.percentWon)
+              : undefined
+          }
           onKeyDown={
             selectable
               ? (event) => {
@@ -239,7 +264,61 @@ export default function CardHalfWinRate({
         <div
           role={selectable ? "button" : undefined}
           tabIndex={selectable ? 0 : undefined}
-          onClick={selectable ? () => handleSelect("Perdu", percentLost, opponentStats.percentLost) : undefined}
+          onClick={
+            selectable
+              ? () => handleSelect("Nulle", percentDraw, opponentStats.percentDraw)
+              : undefined
+          }
+          onKeyDown={
+            selectable
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSelect("Nulle", percentDraw, opponentStats.percentDraw);
+                  }
+                }
+              : undefined
+          }
+          className={`rounded-lg p-3 border ${selectableClass} ${
+            highlightDraw
+              ? "bg-yellow-400/10 ring-1 ring-yellow-300/40 border-yellow-200/40"
+              : "bg-white/5 border-white/5"
+          }`}
+        >
+          <div className="text-xs text-white/70">Nulle</div>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <div>
+              <div
+                className={`text-2xl font-semibold ${
+                  highlightDraw ? "text-yellow-200" : "text-sky-300"
+                }`}
+              >
+                {percentDrawLabel}
+              </div>
+              <div className="text-xs text-white/70">
+                ({draw}/{total})
+              </div>
+            </div>
+            {showOpponent && (
+              <div className="text-right">
+                <div className="text-2xl font-semibold text-orange-300">
+                  {opponentPercentDrawLabel}
+                </div>
+                <div className="text-xs text-white/60">
+                  ({opponentDraw}/{opponentTotal})
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div
+          role={selectable ? "button" : undefined}
+          tabIndex={selectable ? 0 : undefined}
+          onClick={
+            selectable
+              ? () => handleSelect("Perdu", percentLost, opponentStats.percentLost)
+              : undefined
+          }
           onKeyDown={
             selectable
               ? (event) => {

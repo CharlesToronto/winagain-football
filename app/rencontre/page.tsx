@@ -310,7 +310,7 @@ export default async function RencontrePage({
               {groups.length === 0 ? (
                 <div className="text-sm text-white/60">Aucun match prévu.</div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-12">
                   {groups.map((group) => {
                     const competitionLabel = formatCompetitionLabel(group.competition);
                     const roundLabels = group.fixtures
@@ -322,9 +322,9 @@ export default async function RencontrePage({
                     return (
                       <div
                         key={`competition-${section.key}-${group.competition.id}`}
-                        className="rounded-xl border border-white/10 bg-white/5 p-4"
+                        className="space-y-3"
                       >
-                        <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-3">
                           {group.competition.logo ? (
                             <img
                               src={group.competition.logo}

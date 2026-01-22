@@ -17,6 +17,7 @@ export default function Sidebar() {
     text-white
     flex flex-col
     p-6
+    overflow-y-auto
   "
     >
       <nav className="flex flex-col gap-3">

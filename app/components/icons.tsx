@@ -88,3 +88,12 @@ export function IconDatabase({ size = 18, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function IconMessage({ size = 18, ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden {...baseProps} {...props}>
+      <path d="M21 15a4 4 0 0 1-4 4H9l-5 3V7a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4z" />
+      <path d="M8 9h8M8 13h6" />
+    </svg>
+  );
+}
